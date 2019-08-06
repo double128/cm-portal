@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <!-- <form action="" method="post"> -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='view_network.css') }}">
+
+    <h1>View Network: {{ network_name }}</h1> 
+    <table>
+        <tr>
+            <th>Network Details</th>
+        </tr>
+        <tr>
+            <th>Network Name</th>
+            <td>{{ this_network['name'] }}</td>
+        </tr>
+        <tr>
+            <th>Subnet Name</th>
+            <td>{{ this_network['subnets']['name'] }}</td>
+        </tr>
+        <tr>
+            <th>Subnet CIDR</th>
+            <td>{{ this_network['subnets']['cidr'] }}</td>
+        </tr>
+        <tr>
+            <th>Address Pool</th>
+            <td>{{ this_network['subnets']['allocation_pools'][0]['start'] }}-{{ this_network['subnets']['allocation_pools'][0]['end'] }}</td>
+        </tr>
+        <tr>
+            <th>Router Name</th>
+            <td>{% if this_network['router'] %}{{ this_network['router']['name'] }}{% else %}N/A (Internet access disabled){% endif %}</td>
+        </tr>
+        <tr>
+            <th>Gateway IP</th>
+            <td>{{ this_network['subnets']['gateway_ip'] }}</td>
+        </tr>
+        <tr>
+            <th>Time Created</th>
+            <td>{{ this_network['created_at'].replace('T', ' ').replace('Z', ' ') }} UTC</td>
+        </tr>
+        <tr>
+            <th>Last Updated</th>
+            <td>{{ this_network['updated_at'].replace('T', ' ').replace('Z', ' ') }} UTC</td>
+        </tr>
+        <tr><td><br></td></tr>
+        <tr>
+            <th>Configurations</th>
+        </tr>
+        <tr>
+            <th>DHCP Enabled</th>
+            <td>{{ this_network['subnets']['enable_dhcp'] }}</td>
+        </tr>
+        <tr>
+            <th>Port Security Set</th>
+            <td>{{ this_network['port_security_enabled'] }}</td>
+        </tr>
+        <tr>
+            <th>Internet Enabled</th>
+            <td>
+            {% if this_network['router'] %}
+            True
+            {% else %}
+            False
+            {% endif %}
+            </td>
+        </tr>
+
+    </table>
+    <hr>
+    <a href={{ url_for('modify_network', network_id=this_network['id'], network_name=network_name) }}>Modify Network</a>
+    <a href={{ url_for('delete_network', network_id=this_network['id'], network_name=network_name) }}>Delete Network</a>
+    <a href={{ url_for('network_panel') }}>Back</a>
+
+    <!-- </form> -->
+{% endblock %}

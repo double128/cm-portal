@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Project Networks</h1>
+    {% if networks_list %}
+    <table>
+        <tr>
+            <th>Name</th>
+            <th>Full name</th>
+            <th>Subnet</th>
+            <th>Allocation Pool</th>
+            <th>Gateway IP</th>
+        </tr>
+        {% for network in networks_list %}
+        <tr>
+            <td><a href="{{ url_for('view_network', network_id=networks_list[network]['id'], network_name=network) }}">{{ network }}</a></td>
+            <td>{{ networks_list[network]['name'] }}</td>
+            <td>{{ networks_list[network]['subnets']['cidr'] }}</td>
+            <td>{{ networks_list[network]['subnets']['allocation_pools'][0]['start'] }}-{{ networks_list[network]['subnets']['allocation_pools'][0]['end'] }}</td>
+            <td>{{ networks_list[network]['subnets']['gateway_ip'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>No networks found for this course.</p>
+    {% endif %}
+    <hr>
+    <a href="{{ url_for('create_networks') }}">Create Network</a>
+{% endblock %}

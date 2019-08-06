@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Upload Course Roster</h1>
+    <form method="post" enctype="multipart/form-data" id="form">
+        {{ form.hidden_tag() }}
+        {{ form.file }}
+        <input type="submit">
+        <p>
+            {% for error in form.file.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+    </form>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Course Management: {{ course }}</h1>
+<table style="text-align:left">
+    <tr>
+        <th>Username</th>
+        <th>Project Name</th>
+    </tr>
+    {% for user in course_student_list %}
+    <tr>
+        <th>{{ user }}</th>
+        <td>{{ course_student_list[user] }}</td>
+    </tr>
+    {% endfor %}
+</table>
+<hr>
+<a href={{ url_for('edit_quota') }}>Edit Project Quota</a>
+<a href={{ url_for('image_management') }}>Image Management</a>
+{% endblock %}

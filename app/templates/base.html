@@ -1,0 +1,39 @@
+<html>
+    <head>
+      {% if title %}
+      <title>{{ title }} - CM Portal</title>
+      {% else %}
+      <title>CM Portal</title>
+      {% endif %}
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+      {% block head %}{% endblock %}
+    </head>
+    <body>
+        <div><b>CM Portal</b>
+            {% if current_user.is_authenticated %}
+                [{{ current_user.id }}@{{ current_user.project }}]
+            {% endif %}
+            &nbsp;
+        	<a href="{{ url_for('index') }}">Home</a>
+        	{% if current_user.is_anonymous %}
+        	<a href="{{ url_for('login') }}">Login</a>
+        	{% else %}
+            	<a href="{{ url_for('upload') }}">Upload</a>
+            	<a href="{{ url_for('course_management') }}">Course Management</a>
+		        <a href="{{ url_for('network_panel') }}">Networks</a>
+	            <a href="{{ url_for('logout') }}">Logout</a>
+	        {% endif %}
+        </div>
+        <hr>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <span style="color: red;">
+                {% for message in messages %}
+                    {{ message }}<br/>
+                {% endfor %}
+                </span>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </body>
+</html>

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Images</h1>
+<form action="" method="post">
+        {{ form.hidden_tag() }}
+    <table style="text-align:left">
+        <tr>
+            <th></th>
+            <th>Public Images</th>
+        </tr>
+        {% for data in form if data.type == "BooleanField" and data.description == "public" %}
+        <tr>
+            <td>{{ data }}</td>
+            <td>{{ data.label }}</td>
+        </tr>
+        {% endfor %}
+        <tr><th><br></th></tr>
+        <tr>
+            <th></th>
+            <th>Private Images</th>
+        </tr>
+        {% for data in form if data.type == "BooleanField" and data.description == "private" %}
+        <tr>
+            <td>{{ data }}</td>
+            <td>{{ data.label }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <p>{{ form.submit() }} {{ form.download_image() }}</p>
+</form>
+{% endblock %}

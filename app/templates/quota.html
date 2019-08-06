@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block head %}
+{% include 'scripts.html' %}
+{% endblock %}
+
+{% block content %}
+    <h1>Edit Student Quota</h1>
+    <form action="" method="post" id="form">
+        {{ form.hidden_tag() }}
+	    <p>
+	        {{ form.instances_quota.label }}<br>
+	        {{ form.instances_quota }}<br>
+	        {% for error in form.instances_quota.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+	        {% endfor %}
+	    </p>
+	    <p>
+	        {{ form.cores_quota.label }}<br>
+	        {{ form.cores_quota }}<br>
+	        {% for error in form.cores_quota.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+	        {% endfor %}
+	    </p>
+	    <p>
+            {{ form.ram_quota.label }}<br>
+            {{ form.ram_quota }}<br>
+            {% for error in form.ram_quota.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+	    <p>
+            {{ form.networks_quota.label }}<br>
+            {{ form.networks_quota }}<br>
+            {% for error in form.networks_quota.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+	    <p>
+            {{ form.subnets_quota.label }}<br>
+            {{ form.subnets_quota }}<br>
+            {% for error in form.subnets_quota.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+	    <p>
+            {{ form.ports_quota.label }}<br>
+            {{ form.ports_quota }}<br>
+            {% for error in form.ports_quota.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+	    <p>
+            {{ form.fips_quota.label }}<br>
+            {{ form.fips_quota }}<br>
+            {% for error in form.fips_quota.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+	    <p>
+            {{ form.routers_quota.label }}<br>
+            {{ form.routers_quota }}<br>
+            {% for error in form.routers_quota.errors %}
+            <span style="color: red;">[{{ error }}]</span>
+            {% endfor %}
+        </p>
+        <p>{{ form.submit() }}</p>
+    </form>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block content %}
+    
+    <h1>Course Overview</h1>
+
+    {% if jobs %}
+		<h3>Running Jobs:</h3>
+	    {% for job in jobs %}
+			<p><b>Job ID:</b> {{ job }} <b>Task:</b> {{ jobs[job].task }} <b>Status:</b> {{ jobs[job].status }}</p>
+	    {% endfor %}
+	{% endif %}
+
+    {% if projects %}
+    	<h3>Deployed Projects</h3>
+	    {% for project in projects.keys() %}
+	        {% for key in projects[project].keys() %}
+	        <p>{{ key }}</p>
+	        {% endfor %}
+	    {% endfor %}
+	{% endif %}
+{% endblock %}

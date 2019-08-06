@@ -1,0 +1,14 @@
+# Ignore Python stuff
+env/
+venv/
+__pycache__/
+app/__pycache__/
+*.py[cod]
+
+# Ignore Garrett's MAC STUFF
+.DS_Store
+
+# Ignore some other junk
+uploads/
+config.py
+flask_session/
