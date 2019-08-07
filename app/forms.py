@@ -1,12 +1,11 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, IntegerField, SubmitField, FileField, SelectField, BooleanField, SelectMultipleField
+from wtforms import StringField, PasswordField, IntegerField, SubmitField, FileField, SelectField, BooleanField, SelectMultipleField, HiddenField
 from wtforms.validators import DataRequired, NumberRange, Length, IPAddress, InputRequired, ValidationError, StopValidation, Regexp
 
 class LoginForm(FlaskForm):
     username = StringField('Username', default='test', validators=[DataRequired()])
     password = PasswordField('Password', default='cisco123', validators=[DataRequired()])
-    #course = IntegerField('Course', default=1111, validators=[DataRequired()])
-    course = IntegerField('Course', default=2222, validators=[DataRequired()])
+    course = IntegerField('Course', default=1111, validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
     submit = SubmitField('Sign In')
 
@@ -90,8 +89,11 @@ def create_image_checkbox_list(image_list):
     for i, image in enumerate(keys):
         setattr(MultipleCheckboxField, 'image_%d' % i, BooleanField(label=image, description=image_list[image]['visibility']))
 
-    setattr(MultipleCheckboxField, 'submit', SubmitField('Change Visibility'))
+    setattr(MultipleCheckboxField, 'submit_change', SubmitField('Change Visibility'))
+    setattr(MultipleCheckboxField, 'submit_change_hidden', HiddenField())
     setattr(MultipleCheckboxField, 'download_image', SubmitField('Get Image Download Link'))
+    setattr(MultipleCheckboxField, 'download_image_hidden', HiddenField())
+
     return MultipleCheckboxField()
 
         

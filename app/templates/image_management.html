@@ -1,10 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
+<script type="text/javascript">
+$(document).ready(function() {
+	$('#form').submit(function() {
+		$("input[name='submit_change_hidden']", this).val({{ form.submit_change.data }});
+		$("input[name='submit_change']", this).val("Please Wait...").prop('disabled', true);
+		$("input[name='download_image_hidden']", this).val({{ form.download_image.data }});
+		$("input[name='download_image']", this).val("Please Wait...").prop('disabled', true);
+	});
+});
+
+</script>
+
 <h1>Images</h1>
-<form action="" method="post">
-        {{ form.hidden_tag() }}
-    <table style="text-align:left">
+<form action="" method="post" id="form" novalidate>
+	{{ form.hidden_tag() }}
+    	<table style="text-align:left">
         <tr>
             <th></th>
             <th>Public Images</th>
@@ -27,6 +39,6 @@
         </tr>
         {% endfor %}
     </table>
-    <p>{{ form.submit() }} {{ form.download_image() }}</p>
+    <p>{{ form.submit_change() }}{{ form.submit_change_hidden() }} {{ form.download_image() }}{{ form.download_image_hidden() }}</p>
 </form>
 {% endblock %}

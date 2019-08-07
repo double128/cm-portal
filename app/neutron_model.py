@@ -135,7 +135,7 @@ def create_course_subnet(project, course, network_name, subnet, gateway):
 def create_course_network_router(project_ids, course, network_name, subnet_id):
     nt = setup_neutronclient()
 
-    external_network_id = nt.list_networks(name='LAN')['networks'][0]['id']
+    external_network_id = nt.list_networks(name='HRL')['networks'][0]['id']
     instructor_router_name = course + "-Instructors-" + network_name + "-Router"
     instructor_router_body = {'router': {
                                 'name': instructor_router_name,

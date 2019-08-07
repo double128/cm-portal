@@ -2,7 +2,7 @@
 from flask import Flask, session
 from config import Config
 from flask_login import LoginManager
-from celery import Celery 
+from celery import Celery
 from flask_wtf.csrf import CSRFProtect
 from flask_caching import Cache
 from flask_session import Session

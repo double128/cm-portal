@@ -1,5 +1,4 @@
 from app import app, login
-from app.celery_model import process_user
 import re
 
 @login.user_loader
@@ -11,11 +10,14 @@ def load_user(id):
 
 
 def process_csv(course, file):
-    with open(file, 'r') as filehandle:  
+    with open(file, 'r') as filehandle:
         for line in filehandle:
             if '@uoit' in line:
-                line = re.sub('\"|\n|\r\n|\r', '', line)
-                username = line.split(',')[4]
-                email = line.split(',')[9]
-                task = process_user.delay(course, username, email)
+                try:
+                    line = re.sub('\"|\n|\r\n|\r', '', line)
+                    username = line.split(',')[4]
+                    email = line.split(',')[9]
+                    task = process_user.delay(course, username, email)
+                except IndexError:
+                    return render_template("500.html", error="Something is wrong with your .csv file formatting. Please make sure that the file has been formatted correctly before uploading again.")
 

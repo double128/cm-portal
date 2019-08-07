@@ -11,9 +11,10 @@ from app import keystone_model as keystone
 from app import nova_model as nova
 from app import neutron_model as neutron
 from app import glance_model as glance
+from app import celery_model as worker
 from app import exceptions as exceptions
 import re
-import pprint 
+import pprint
 
 @app.route('/')
 @login_required
@@ -29,7 +30,7 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         osession = keystone.OpenStackUser()
-        
+
         if not osession.login(form.username.data, form.password.data, str(form.course.data)):
             flash('Login Failed')
             return redirect(url_for('login'))
@@ -77,7 +78,7 @@ def course_management():
 def edit_quota():
     #user_subproject_id = keystone.get_course_subproject_id(current_user.course)
     #subproject_quota = nova.get_project_quota(user_subproject_id)
-    
+
     # Get quota details from the first student in the course
     student_quota = nova.get_project_quota(list(keystone.get_projects(current_user.course)['students'].values())[0])
 
@@ -100,7 +101,7 @@ def edit_quota():
     form.fips_quota.default = student_quota['floatingip']
     form.routers_quota.default = student_quota['router']
     form.process()
-    
+
     return render_template('quota.html', form=form)
 
 
@@ -128,20 +129,20 @@ def create_networks():
             return redirect(url_for('create_networks'))
         except Exception as e:
             return render_template("500.html", error=str(e))
-        
+
         cidr = form.check_cidr()
         gateway = form.set_gateway(cidr)
-        
+
         if cidr != False and gateway != False:
             try:
                 neutron.create_course_subnet(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
             except Exception as e:
                 return render_template("500.html", error=str(e))
-            
+
             flash('Successfully created new networks')
             cache.clear()
             return redirect(url_for('network_panel'))
-    
+
     form.network_address.default = '192.168.0.0'
     form.process()
 
@@ -175,7 +176,7 @@ def modify_network(network_id, network_name):
 
     prev_dhcp_toggle = this_network['subnets']['enable_dhcp']
     prev_port_security_toggle = this_network['port_security_enabled']
-    
+
     if this_network['router']:
         prev_internet_access_toggle = True
     else:
@@ -190,8 +191,8 @@ def modify_network(network_id, network_name):
 
             if dhcp_toggle_change is True:
                 #neutron.toggle_network_dhcp(current_user.course, network_name, subnet_id, form.dhcp_toggle.data)
-                neutron.toggle_network_dhcp(this_network, form.dhcp_toggle.data)   
-            
+                neutron.toggle_network_dhcp(this_network, form.dhcp_toggle.data)
+
             if ps_toggle_change is True:
                 neutron.toggle_network_port_security(this_network, form.port_security_toggle.data)
 
@@ -201,13 +202,13 @@ def modify_network(network_id, network_name):
             flash("Network configurations have been successfully updated")
             cache.clear()
             return redirect(url_for('view_network', network_name=network_name, network_id=network_id))
-    
+
     if request.method == 'GET':
         form.dhcp_toggle.default = prev_dhcp_toggle
         form.port_security_toggle.default = prev_port_security_toggle
         form.internet_access_toggle.default = prev_internet_access_toggle
         form.process()
-    
+
     return render_template('modify_network.html', form=form, network_id=network_id, network_name=network_name, this_network=this_network)
 
 
@@ -218,12 +219,12 @@ def delete_network(network_id, network_name):
     this_network = networks_list[network_name]
     subnet_id = this_network['subnets']['id']
     form = AcceptDeleteForm()
-    
+
     if form.validate_on_submit():
         if form.accept_delete.data:
             if this_network['router']:
                 neutron.delete_course_network_router(this_network)
-            
+
             neutron.delete_course_network(current_user.project, current_user.course, this_network)
             flash("Network has been successfully deleted")
             cache.clear()
@@ -243,7 +244,10 @@ def image_management():
     form = create_image_checkbox_list(image_list)
 
     if form.validate_on_submit():
-        if form.submit.data:
+        print('inside form validation')
+        print(form.submit_change_hidden.data)
+        print(form.download_image_hidden.data)
+        if form.submit_change.data:
             for submitted in form:
                 if submitted.type == "BooleanField":
                     if submitted.data is True:
@@ -252,11 +256,14 @@ def image_management():
 
             flash("Image visibility updated")
             return redirect(url_for('image_management'))
-        
-        if form.download_image.data:
+
+        elif form.download_image.data:
             for submitted in form:
                 if submitted.type == "BooleanField" and submitted.data is True:
-                    glance.download_image(current_user.id, clean_html_tags(str(submitted.label)))
+                    print('inside elif form.download_image.data')
+                    glance.download_image(current_user.id, current_user.course, clean_html_tags(str(submitted.label)))
+            flash("A download link will be sent to your email (%s) shortly" % keystone.get_instructor_email(current_user.id))
+            return redirect(url_for('image_management'))
 
     return render_template('image_management.html', image_list=image_list, form=form)
 
@@ -270,3 +277,9 @@ def clean_html_tags(html):
 def testing():
     #keystone.get_user_email(current_user.id)
     return render_template('testing.html')
+
+@app.route('/celery_test')
+@login_required
+def celery_test():
+    worker.example.delay('hello world')
+    return ''
