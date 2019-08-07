@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 
-{% block content %}
-    <!-- <form action="" method="post"> -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='view_network.css') }}">
+{% block head %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+{% endblock %}
 
+{% block content %}
     <h1>View Network: {{ network_name }}</h1> 
-    <table>
-        <tr>
+    <table class="left-align">
+    	<tr>
             <th>Network Details</th>
         </tr>
         <tr>
@@ -69,6 +70,4 @@
     <a href={{ url_for('modify_network', network_id=this_network['id'], network_name=network_name) }}>Modify Network</a>
     <a href={{ url_for('delete_network', network_id=this_network['id'], network_name=network_name) }}>Delete Network</a>
     <a href={{ url_for('network_panel') }}>Back</a>
-
-    <!-- </form> -->
 {% endblock %}

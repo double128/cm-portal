@@ -1,0 +1,9 @@
+.disabled-button {
+	pointer-events:none;
+	cursor: not-allowed;
+	color: #999;
+}
+
+table.left-align {
+	text-align:left;
+}

@@ -244,27 +244,32 @@ def image_management():
     form = create_image_checkbox_list(image_list)
 
     if form.validate_on_submit():
-        print('inside form validation')
-        print(form.submit_change_hidden.data)
-        print(form.download_image_hidden.data)
-        if form.submit_change.data:
+        if form.change_visibility.data is True:
             for submitted in form:
                 if submitted.type == "BooleanField":
                     if submitted.data is True:
-                            # TODO: Create a function for this in glance_model
-                            glance.set_visibility(image_list[clean_html_tags(str(submitted.label))])
-
+                        glance.set_visibility(image_list[clean_html_tags(str(submitted.label))])
             flash("Image visibility updated")
             return redirect(url_for('image_management'))
 
-        elif form.download_image.data:
-            for submitted in form:
-                if submitted.type == "BooleanField" and submitted.data is True:
-                    print('inside elif form.download_image.data')
-                    glance.download_image(current_user.id, current_user.course, clean_html_tags(str(submitted.label)))
-            flash("A download link will be sent to your email (%s) shortly" % keystone.get_instructor_email(current_user.id))
-            return redirect(url_for('image_management'))
+        elif form.download_image.data is True:
+            # Check if only one box is checked
+            form_dict = form.data
+            boolean_list = []
+            for key in form_dict:
+                if 'image_' in key:
+                    boolean_list.append(form_dict[key])
+            
+            if boolean_list.count(True) > 1:
+                flash("You can only select one image at a time for download.")
+                return redirect(url_for('image_management'))
 
+            else:
+                for submitted in form:
+                    if submitted.type == "BooleanField" and submitted.data is True:
+                        glance.download_image(current_user.id, current_user.course, clean_html_tags(str(submitted.label)))
+                        flash("A download link will be sent to your email (%s) shortly" % keystone.get_instructor_email(current_user.id))
+                        return redirect(url_for('image_management'))
     return render_template('image_management.html', image_list=image_list, form=form)
 
 def clean_html_tags(html):

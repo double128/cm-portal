@@ -1,18 +1,56 @@
 {% extends "base.html" %}
 
-{% block content %}
+{% block head %}
 <script type="text/javascript">
-$(document).ready(function() {
-	$('#form').submit(function() {
-		$("input[name='submit_change_hidden']", this).val({{ form.submit_change.data }});
-		$("input[name='submit_change']", this).val("Please Wait...").prop('disabled', true);
-		$("input[name='download_image_hidden']", this).val({{ form.download_image.data }});
-		$("input[name='download_image']", this).val("Please Wait...").prop('disabled', true);
+$(document).ready(function() { 
+	{# Disable submit buttons until a checkbox is selected #}
+	const button = $("input[type='submit']")
+	button.addClass("disable-buttons")
+	$("input[type='checkbox']").change(function() {
+		if (this.checked) {
+			button.removeClass("disable-buttons").css("cursor", "pointer");
+		} else {
+			button.addClass("disable-buttons").css("cursor", "not-allowed");
+		}
+	});
+
+	{# Only allow one image at a time to be selected for download; this is the first of two checks, the backend can check as well just in case #}
+	$("input[name='download_image']").click(function(event) {
+		var n = $("input[type='checkbox']:checked").length;
+		if (n > 1) {
+			alert("You can only select one image at a time to download.")
+			event.preventDefault();
+			location.reload();
+		}
 	});
 });
 
+function submitButton(clickedButton) {
+	$('.submit-button').addClass('stop-interaction');
+	$(clickedButton).val("Please wait...").addClass('visual-changes');
+};
+
 </script>
 
+<style>
+input.stop-interaction {
+	pointer-events:none;
+}
+
+input.visual-changes {
+	color: #999 !important;
+}
+
+input.disable-buttons {
+	pointer-events:none;
+	color: #999;
+}
+
+</style>
+{% endblock %}
+
+
+{% block content %}
 <h1>Images</h1>
 <form action="" method="post" id="form" novalidate>
 	{{ form.hidden_tag() }}
@@ -39,6 +77,9 @@ $(document).ready(function() {
         </tr>
         {% endfor %}
     </table>
-    <p>{{ form.submit_change() }}{{ form.submit_change_hidden() }} {{ form.download_image() }}{{ form.download_image_hidden() }}</p>
+    <p> 
+    	<input class="submit-button" id="change_visibility" name="change_visibility" type="submit" value="Change Visibility" onclick="submitButton(this)">
+    	<input class="submit-button" id="download_image" name="download_image" type="submit" value="Get Image Download Link" onclick="submitButton(this)">
+    </p>
 </form>
 {% endblock %}

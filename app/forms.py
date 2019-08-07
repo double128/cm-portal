@@ -84,16 +84,14 @@ class AcceptDeleteForm(FlaskForm):
 def create_image_checkbox_list(image_list):
     class MultipleCheckboxField(FlaskForm):
         pass
-
+    
     keys = image_list.keys()
     for i, image in enumerate(keys):
+        # Include a description that stores the visibility state of the image (public/private) for Jinja2 to sort the images into separate lists
         setattr(MultipleCheckboxField, 'image_%d' % i, BooleanField(label=image, description=image_list[image]['visibility']))
-
-    setattr(MultipleCheckboxField, 'submit_change', SubmitField('Change Visibility'))
-    setattr(MultipleCheckboxField, 'submit_change_hidden', HiddenField())
+    
+    setattr(MultipleCheckboxField, 'change_visibility', SubmitField('Change Visibility'))
     setattr(MultipleCheckboxField, 'download_image', SubmitField('Get Image Download Link'))
-    setattr(MultipleCheckboxField, 'download_image_hidden', HiddenField())
-
     return MultipleCheckboxField()
 
         
