@@ -2,22 +2,67 @@
 
 {% block head %}
 <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+
+<script type="text/javascript">
+$(document).ready(function() { 
+        {# Disable submit buttons until a checkbox is selected #}
+        const button = $("input[type='submit']")
+        button.addClass("disable-buttons")
+        $("input[type='checkbox']").change(function() {
+                if (this.checked) {
+                        button.removeClass("disable-buttons").css("cursor", "pointer");
+                } else {
+                        button.addClass("disable-buttons").css("cursor", "not-allowed");
+                }
+        });
+});
+
+
+function submitButton(clickedButton) {
+	$('.submit-button').addClass('stop-interaction');
+	$(clickedButton).val("Please wait...").addClass('visual-changes');
+};
+</script>
+
+<style>
+input.stop-interaction {
+	pointer-events:none;
+}
+
+input.visual-changes {
+	color: #999 !important;
+}
+
+input.disable-buttons {
+        pointer-events:none;
+        color: #999;
+}
+</style>
 {% endblock %}
 
 {% block content %}
 <h1>Course Management: {{ course }}</h1>
-<table class="left-align">
-    <tr>
-        <th>Username</th>
-        <th>Project Name</th>
-    </tr>
-    {% for user in course_student_list|sort %}
-    <tr>
-        <th>{{ user }}</th>
-        <td>{{ course_student_list[user] }}</td>
-    </tr>
-    {% endfor %}
-</table>
+<form action="" method="post" id="form">
+	{{ form.hidden_tag() }}
+	<table class="left-align">
+   		<tr>
+			<th></th>
+        		<th>Username</th>
+        		<th>Project Name</th>
+    		</tr>
+    		{% for data in form if data.type == "BooleanField" %}
+    		<tr>
+		    <td>{{ data }}</th>
+	    	    <th>{{ data.label }}</th>
+	    	    <td>{{ data.description }}</td>
+    		</tr>
+    		{% endfor %}
+	</table>
+	<p>
+	<input class="submit-button" id="reset_password" name="reset_password" type="submit" value="Reset Password" onclick="submitButton(this)">
+	<input class="submit-button" id="designate_as_ta" name="designate_as_ta" type="submit" value="Designate Student as TA" onclick="submitButton(this)">
+	</p>
+</form>
 <hr>
 <a href={{ url_for('edit_quota') }}>Edit Project Quota</a>
 <a href={{ url_for('image_management') }}>Image Management</a>

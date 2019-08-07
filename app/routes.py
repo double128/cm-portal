@@ -11,6 +11,7 @@ from app import nova_model as nova
 from app import neutron_model as neutron
 from app import glance_model as glance
 from app import celery_model as worker
+from app import email_model as email
 from app import exceptions as exceptions
 import re
 import pprint
@@ -67,9 +68,26 @@ def upload():
 @app.route('/manage', methods=['GET', 'POST'])
 @login_required
 def course_management():
-    #course_student_list = keystone.get_project_users(current_user.course)
+    from app.forms import create_student_checkbox_list
     course_student_list = keystone.get_course_student_info(current_user.project, current_user.course)
-    return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course)
+    form = create_student_checkbox_list(course_student_list)
+    
+    if form.validate_on_submit():
+        if form.reset_password.data is True:
+            for submitted in form:
+                if submitted.data is True and submitted.type == "BooleanField":
+                    email.send_password_reset_info.delay(clean_html_tags(str(submitted.label)))
+            flash("User password(s) have been reset")
+        
+        elif form.designate_as_ta.data is True:
+            for submitted in form:
+                if submitted.data is True and submitted.type == "BooleanField":
+                    keystone.set_student_as_ta(clean_html_tags(str(submitted.label)), current_user.course)
+            flash("Student has been designated as a course TA")
+            course_student_list = keystone.get_course_student_info(current_user.project, current_user.course)
+            return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form)
+
+    return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form)
 
 
 @app.route('/manage/edit_quota', methods=['GET', 'POST'])

@@ -1,3 +1,4 @@
+from app import celery
 from .keystone_model import *
 from .exceptions import *
 from neutronclient.v2_0 import client as neutronclient

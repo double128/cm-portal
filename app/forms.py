@@ -94,6 +94,17 @@ def create_image_checkbox_list(image_list):
     setattr(MultipleCheckboxField, 'download_image', SubmitField('Get Image Download Link'))
     return MultipleCheckboxField()
 
+def create_student_checkbox_list(course_student_list):
+    class MultipleCheckboxField(FlaskForm):
+        pass
+    
+    keys = course_student_list.keys()
+    for s, student in enumerate(keys):
+        setattr(MultipleCheckboxField, 'student_%d' % s, BooleanField(label=student, description=course_student_list[student]))
+
+    setattr(MultipleCheckboxField, 'reset_password', SubmitField('Reset Password'))
+    setattr(MultipleCheckboxField, 'designate_as_ta', SubmitField('Designate Student as TA'))
+    return MultipleCheckboxField()
         
 
 #class ImageManagementForm(FlaskForm):

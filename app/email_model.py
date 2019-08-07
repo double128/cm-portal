@@ -1,10 +1,9 @@
-from app import app
-from app.keystone_model import get_instructor_email
+from app import app, celery
+from app.keystone_model import get_user_email, reset_user_password
 import requests
 
 def send_image_download_link(username, file_name):
-    print('inside send_image_download_link')
-    instructor_email = get_instructor_email(username)
+    instructor_email = get_user_email(username)
     email_body = """<pre>
     ################### THIS IS AN AUTOMATED EMAIL #######################
     Your image is now available for download <a href="https://cloud.hrl.uoit.ca/%s">here</a>.
@@ -20,4 +19,21 @@ def send_image_download_link(username, file_name):
                                 'html': email_body})
     #print('Status: '.format(request.status_code))
     #print('Body: '.format(request.text))
-                            
+
+@celery.task(bind=True)
+def send_password_reset_info(self, username):
+    reset_user_password(username)
+    user_email = get_user_email(username)
+    email_body = """<pre>
+    ################### THIS IS AN AUTOMATED EMAIL #######################
+    Your instructor has requested a password reset for your account, %s.
+    Your password has been reset to <b>cisco123</b>. Please change it as soon as possible.
+    </pre>""" % username
+
+    request = requests.post(app.config['MAILGUN_URL'],
+                            auth=('api', app.config['MAILGUN_APIKEY']),
+                            data={
+                                'from': 'Cloudbot <cloudbot@hrl.uoit.ca>',
+                                'to': user_email,
+                                'subject': 'Cloud Password Reset',
+                                'html': email_body})

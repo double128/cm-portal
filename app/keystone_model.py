@@ -76,7 +76,7 @@ def get_user_id(username):
     else:
         return None
 
-def get_instructor_email(username):
+def get_user_email(username):
     ks = get_keystone_session()
     return utils.find_resource(ks.users, username).email
 
@@ -177,3 +177,17 @@ def get_course_student_info(project, course):
         user_info_dict[user_name] = name
     return user_info_dict
 
+
+def reset_user_password(username):
+    ks = get_keystone_session()
+    ks.users.update(get_user_id(username), password='cisco123')
+
+
+def set_student_as_ta(username, course):
+    ks = get_keystone_session()
+    project_list = get_projects(course)
+    if project_list['students'][course + "-" + username]:
+        ks.projects.delete(project_list['students'][course + "-" + username])
+        ks.users.update(get_user_id(username), project=list(project_list['instructors'].values())[0])
+
+    
