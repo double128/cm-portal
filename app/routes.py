@@ -4,7 +4,6 @@ from werkzeug import secure_filename
 from werkzeug.urls import url_parse
 from app import app, celery
 from app.forms import LoginForm, UploadForm, QuotaForm, CreateNetworkForm, EditNetworkForm, AcceptDeleteForm
-#from app.forms import *
 from app.models import process_csv
 from . import cache
 from app import keystone_model as keystone
@@ -280,7 +279,7 @@ def clean_html_tags(html):
 @app.route('/test', methods=['GET', 'POST'])
 @login_required
 def testing():
-    #keystone.get_user_email(current_user.id)
+    keystone.add_role('100111111', 'INFR-1111-100111111', 'INFR-1111')
     return render_template('testing.html')
 
 @app.route('/celery_test')

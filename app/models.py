@@ -1,4 +1,5 @@
 from app import app, login
+from app import keystone_model as keystone
 import re
 
 @login.user_loader
@@ -13,11 +14,11 @@ def process_csv(course, file):
     with open(file, 'r') as filehandle:
         for line in filehandle:
             if '@uoit' in line:
-                try:
-                    line = re.sub('\"|\n|\r\n|\r', '', line)
-                    username = line.split(',')[4]
-                    email = line.split(',')[9]
-                    task = process_user.delay(course, username, email)
-                except IndexError:
-                    return render_template("500.html", error="Something is wrong with your .csv file formatting. Please make sure that the file has been formatted correctly before uploading again.")
+                #try:
+                line = re.sub('\"|\n|\r\n|\r', '', line)
+                username = line.split(',')[4]
+                email = line.split(',')[9]
+                keystone.process_new_users.delay(course, username, email)
+                #except IndexError:
+                #    return render_template("500.html", error="Something is wrong with your .csv file formatting. Please make sure that the file has been formatted correctly before uploading again.")
 

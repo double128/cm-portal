@@ -1,4 +1,4 @@
-from app import app, login
+from app import app, login, celery
 from flask_login import UserMixin
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
@@ -116,8 +116,8 @@ def add_user(username, email):
 
 
 def add_project(project):
-    keystone = get_keystone_session()
-    success = keystone.projects.create(name=project,
+    ks = get_keystone_session()
+    success = ks.projects.create(name=project,
                                     domain='default',
                                     description='Auto-generated Project',
                                     enabled=True) 
@@ -127,20 +127,26 @@ def add_project(project):
         return False
 
 
-def add_role(username, project):
+def add_role(username, project, course):
+    ks = get_keystone_session()
+
     uid = get_user_id(username)
-    pid = get_project_id(project)
+    pid = get_projects(course)['students'][project]
+    user_role_id = utils.find_resource(ks.roles, 'user').id
+
     if not uid or not pid:
         return False
+    #if not ks.role_assignments.list(project=pid, role=user_role_id):
     if not get_project_role(uid, pid):
         keystone = get_keystone_session()
-        result = keystone.roles.grant('3af37119e0df4aa48c51df8ee8c14791', user=uid, project=pid)
+        result = keystone.roles.grant(user_role_id, user=uid, project=pid)
         if not result:
             return False
     return True
 
 
-def process_new_user(course, username, email):
+@celery.task(bind=True)
+def process_new_users(self, course, username, email):
     users = get_users()
     projects = get_projects(course)
     if not users or not projects:
@@ -151,26 +157,17 @@ def process_new_user(course, username, email):
             return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not create user ' + username}
 
     project = course + '-' + username
-    if project not in projects:
+    if project not in projects['students']:
         if not add_project(project):
             return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not add user ' + username + ' to project ' + project}
 
-    if not add_role(username, project):
+    # We check if the role assignment already exists inside of add_role()
+    if not add_role(username, project, course):
         return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not add user role for ' + username + ' to project ' + project}
 
     return {'task': 'Process User', 'status': 'Complete', 'result': 'Processed user ' + username + ' with project ' + project}
-
-
-#def get_course_student_info(project, course):
-#    ks = get_keystone_session()
-#    subprojects = get_all_course_subproject_id(course)
-#    user_info_dict = {}
-#    for name in subprojects:
-#        user_name = name.split(course, 2)[1]
-#        user_info = utils.find_resource(ks.users, user_name).__dict__['_info']
-#        user_info_dict.update({user_name: {'user_id': user_info['id'], 'user_email': user_info['email'], 'project_name': name}})
-#    return user_info_dict
         
+
 def get_course_student_info(project, course):
     ks = get_keystone_session()
     projects = get_projects(course)
