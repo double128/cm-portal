@@ -1,3 +1,4 @@
+from app import celery
 from novaclient import client as novaclient
 from .keystone_model import * 
 from .neutron_model import setup_neutronclient
@@ -28,7 +29,8 @@ def get_project_quota(student_project_id):
     
     return quota_dict
 
-def update_project_quota(student_project_id, instanceq, coreq, ramq, netq, subq, portq, fipq, routerq):
+@celery.task(bind=True)
+def update_project_quota(self, student_project_id, instanceq, coreq, ramq, netq, subq, portq, fipq, routerq):
     nv = setup_novaclient()
     nt = setup_neutronclient()
 

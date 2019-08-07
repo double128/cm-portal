@@ -11,12 +11,15 @@
 	    {% endfor %}
 	{% endif %}
 
-    {% if projects %}
-    	<h3>Deployed Projects</h3>
-	    {% for project in projects.keys() %}
-	        {% for key in projects[project].keys() %}
-	        <p>{{ key }}</p>
-	        {% endfor %}
-	    {% endfor %}
+	{% if projects %}
+	<h3>Deployed Projects</h3>
+	<b>Instructor Projects</b>
+	{% for project in projects['instructors']|sort %}
+		<p>{{ project }}</p>
+	{% endfor %}
+	<b>Student Projects</b>
+	{% for project in projects['students']|sort %}
+		<p>{{ project }}</p>
+	{% endfor %}
 	{% endif %}
 {% endblock %}

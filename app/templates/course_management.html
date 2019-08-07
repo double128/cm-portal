@@ -11,7 +11,7 @@
         <th>Username</th>
         <th>Project Name</th>
     </tr>
-    {% for user in course_student_list %}
+    {% for user in course_student_list|sort %}
     <tr>
         <th>{{ user }}</th>
         <td>{{ course_student_list[user] }}</td>

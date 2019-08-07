@@ -15,7 +15,7 @@
             <th>Allocation Pool</th>
             <th>Gateway IP</th>
         </tr>
-        {% for network in networks_list %}
+        {% for network in networks_list|sort %}
         <tr>
             <td><a href="{{ url_for('view_network', network_id=networks_list[network]['id'], network_name=network) }}">{{ network }}</a></td>
             <td>{{ networks_list[network]['name'] }}</td>

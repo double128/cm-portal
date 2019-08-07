@@ -75,20 +75,18 @@ def course_management():
 @app.route('/manage/edit_quota', methods=['GET', 'POST'])
 @login_required
 def edit_quota():
-    #user_subproject_id = keystone.get_course_subproject_id(current_user.course)
-    #subproject_quota = nova.get_project_quota(user_subproject_id)
-
     # Get quota details from the first student in the course
     student_quota = nova.get_project_quota(list(keystone.get_projects(current_user.course)['students'].values())[0])
 
     form = QuotaForm()
     if form.validate_on_submit():
         for pid in keystone.get_projects(current_user.course)['students'].values():
-            nova.update_project_quota(pid, form.instances_quota.data, form.cores_quota.data, \
+            print(pid)
+            nova.update_project_quota.delay(pid, form.instances_quota.data, form.cores_quota.data, \
                      form.ram_quota.data, form.networks_quota.data, form.subnets_quota.data, \
                      form.ports_quota.data, form.fips_quota.data, form.routers_quota.data)
-            flash('Quota updated')
-            return redirect(url_for('course_management'))
+        flash('Quota updated')
+        return redirect(url_for('course_management'))
 
     # Make default value equal to whatever's currently set
     form.instances_quota.default = student_quota['instances']
@@ -279,7 +277,7 @@ def clean_html_tags(html):
 @app.route('/test', methods=['GET', 'POST'])
 @login_required
 def testing():
-    keystone.add_role('100111111', 'INFR-1111-100111111', 'INFR-1111')
+    #keystone.add_role('100111111', 'INFR-1111-100111111', 'INFR-1111')
     return render_template('testing.html')
 
 @app.route('/celery_test')
