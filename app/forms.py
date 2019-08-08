@@ -100,7 +100,10 @@ def create_student_checkbox_list(course_student_list):
     
     keys = course_student_list.keys()
     for s, student in enumerate(keys):
-        setattr(MultipleCheckboxField, 'student_%d' % s, BooleanField(label=student, description=course_student_list[student]))
+        if 'nstructors' not in course_student_list[student]:
+            setattr(MultipleCheckboxField, 'student_%d' % s, BooleanField(label=student, description=course_student_list[student]))
+        else:
+            setattr(MultipleCheckboxField, 'ta_%d' % s, BooleanField(label=student, description=course_student_list[student]))
 
     setattr(MultipleCheckboxField, 'reset_password', SubmitField('Reset Password'))
     setattr(MultipleCheckboxField, 'designate_as_ta', SubmitField('Designate Student as TA'))

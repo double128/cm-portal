@@ -6,17 +6,24 @@
 <script type="text/javascript">
 $(document).ready(function() { 
         {# Disable submit buttons until a checkbox is selected #}
-        const button = $("input[type='submit']")
-        button.addClass("disable-buttons")
-        $("input[type='checkbox']").change(function() {
-                if (this.checked) {
-                        button.removeClass("disable-buttons").css("cursor", "pointer");
-                } else {
-                        button.addClass("disable-buttons").css("cursor", "not-allowed");
-                }
-        });
-});
+	button.addClass("disable-buttons") #}
+        
+	$("input[type='submit']").addClass("disable-buttons")
+	$("input[type='checkbox']").change(function() {
+		var student_checkbox = $("input[name*='student_']").filter(":checked").length;
+		var ta_checkbox = $("input[name*='ta_']").filter(":checked").length
 
+		if ((student_checkbox == 0) && (ta_checkbox == 0)) {
+			$("input[type='submit']").addClass("disable-buttons");
+		} else if ((student_checkbox >= 1) && (ta_checkbox == 0)) {
+			$("input[type='submit']").removeClass("disable-buttons");
+		} else if ((student_checkbox >= 1) && (ta_checkbox >= 1)) {
+			$("input[name*='designate_as_ta']").addClass("disable-buttons");
+		} else if ((student_checkbox == 0) && (ta_checkbox >= 1)) {
+			$("input[name*='reset_password']").removeClass("disable-buttons");
+		}
+	});
+});
 
 function submitButton(clickedButton) {
 	$('.submit-button').addClass('stop-interaction');
@@ -50,8 +57,16 @@ input.disable-buttons {
         		<th>Username</th>
         		<th>Project Name</th>
     		</tr>
-    		{% for data in form if data.type == "BooleanField" %}
+    		{% for data in form if data.type == "BooleanField" and 'nstructors' not in data.description %}
     		<tr>
+		    <td>{{ data }}</th>
+	    	    <th>{{ data.label }}</th>
+	    	    <td>{{ data.description }}</td>
+    		</tr>
+    		{% endfor %}
+		<tr><th><br></th></tr>
+		{% for data in form if data.type == "BooleanField" and 'nstructors' in data.description %}
+		<tr>
 		    <td>{{ data }}</th>
 	    	    <th>{{ data.label }}</th>
 	    	    <td>{{ data.description }}</td>

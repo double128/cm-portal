@@ -171,10 +171,17 @@ def process_new_users(self, course, username, email):
 def get_course_student_info(project, course):
     ks = get_keystone_session()
     projects = get_projects(course)
+    instructor_project_id = list(projects['instructors'].values())[0]
+    role_assignments_list = ks.role_assignments.list(project=instructor_project_id)
+    
     user_info_dict = {}
-    for name in projects['students']:
-        user_name = name.split(course, 2)[1].split('-', 1)[1]
-        user_info_dict[user_name] = name
+    for student_username in get_users():
+        if projects['students'].get(course + '-' + student_username):
+            user_info_dict[student_username] = course + '-' + student_username
+
+        elif get_user_id(student_username) in [u.user['id'] for u in role_assignments_list]:
+            user_info_dict[student_username] = list(projects['instructors'].keys())[0]
+ 
     return user_info_dict
 
 
@@ -186,8 +193,25 @@ def reset_user_password(username):
 def set_student_as_ta(username, course):
     ks = get_keystone_session()
     project_list = get_projects(course)
-    if project_list['students'][course + "-" + username]:
-        ks.projects.delete(project_list['students'][course + "-" + username])
-        ks.users.update(get_user_id(username), project=list(project_list['instructors'].values())[0])
-
     
+    # Project should exist at all times if the student is not a TA, but we check anyways
+    # FOR REFERENCE: .get() will return "None" if that key does not exist, instead of causing a stack trace, so use it for checks like this plz
+    if project_list['students'].get(course + '-' + username):
+        student_project_id = project_list['students'][course + '-' + username]
+        instructor_project_id = list(project_list['instructors'].values())[0]
+        ks.projects.delete(project_list['students'][course + '-' + username])
+        ks.roles.grant(utils.find_resource(ks.roles, 'user').id, user=get_user_id(username), project=instructor_project_id)
+        # TODO: Also delete their networks, subnets, and routers
+
+
+def get_instructor_project_users(course, project):
+    ks = get_keystone_session()
+    project_list = get_projects(course)
+    instructor_project_id = list(project_list['instructors'].values())[0]
+
+    user_id = get_user_id('100111111')
+    user_id_other = get_user_id('100222222')
+
+    print(ks.role_assignments.list(user=user_id, project=instructor_project_id))
+    print(ks.role_assignments.list(user=user_id_other, project=instructor_project_id))
+

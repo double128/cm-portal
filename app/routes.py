@@ -117,7 +117,7 @@ def edit_quota():
     form.routers_quota.default = student_quota['router']
     form.process()
 
-    return render_template('quota.html', form=form)
+    return render_template('edit_quota.html', form=form)
 
 
 @app.route('/networks', methods=['GET', 'POST'])
@@ -296,7 +296,9 @@ def clean_html_tags(html):
 @login_required
 def testing():
     #keystone.add_role('100111111', 'INFR-1111-100111111', 'INFR-1111')
+    keystone.get_instructor_project_users(current_user.course, current_user.project)
     return render_template('testing.html')
+
 
 @app.route('/celery_test')
 @login_required
