@@ -65,47 +65,38 @@ def list_project_network_details(project, course):
     # Has this been fully optimized/fixed? I have no idea. Just LEAVE IT.
 
 
-def create_course_network(project, course, network_name):
-    nt = setup_neutronclient()
-    
-    instructor_network_name = course + "-Instructors-" + network_name + "-Network"
-    
-    try:
-        if nt.list_networks(name=instructor_network_name)['networks'][0]['id']:
-            raise NetworkNameAlreadyExists("A network named \"" + network_name + "\" already exists. Please use another name.")
-    except IndexError:
-        # If this is thrown, it means there's no networks with this name
-        pass
-
-    project_ids = get_projects(course)
-    instructor_network_body = {'network': {
-                                'name': instructor_network_name, 
-                                'project_id': list(project_ids['instructors'].values())[0],
-                                'router:external': False}}
-    nt.create_network(body=instructor_network_body)
-
-    for student in project_ids['students']:
-        student_network_name = student + "-" + network_name + "-Network"
-        student_project_id = project_ids['students'][student]
-        student_network_body = {'network': {
-                                    'name': student_network_name,
-                                    'project_id': student_project_id,
-                                    'router:external': False}}
-        nt.create_network(body=student_network_body)
-
-
-def verify_network_name(course, network_name):
+"""""""""""""""
+CREATE NETWORKS
+"""""""""""""""
+def check_network_name(course, network_name):
     nt = setup_neutronclient()
     instructor_network_name = course + "-Instructors-" + network_name + "-Network"
     try:
         if nt.list_networks(name=instructor_network_name)['networks'][0]['id']:
             raise NetworkNameAlreadyExists("A network named \"" + network_name + "\" already exists. Please use another name.")
     except IndexError:
-        # If this is thrown, it means there's no networks with this name
+        # If this is thrown, it means there's no networks with this name, so continue
         pass
 
 
+def setup_course_network(project, course, network_name):
+    projects = get_projects(course)
+    create_course_network.delay(list(projects['instructors'].values())[0], course + '-Instructors-' + network_name + "-Network")
+    for project in projects['students']:
+        create_course_network.delay(projects['students'][project], project + '-' + network_name + '-Network')
 
+
+@celery.task(bind=True)
+def create_course_network(self, project_id, network_name):
+    nt = setup_neutronclient()
+    if not nt.create_network(body={'network': {'name': network_name, 'project_id': project_id, 'router:external': False}}):
+        return {'task': 'Create Network', 'status': 'Failed', 'result': 'Could not create network ' + network_name}
+    return {'task': 'Create Network', 'status': 'Complete', 'result': 'Created network ' + network_name}
+
+
+"""""""""""""""
+DELETE NETWORKS
+"""""""""""""""
 def delete_course_network(project, course, network):
     nt = setup_neutronclient()
 
@@ -114,37 +105,41 @@ def delete_course_network(project, course, network):
         nt.delete_network(network['children'][student]['id'])
 
 
-def create_course_subnet(project, course, network_name, subnet, gateway):
+"""""""""""""""
+CREATE SUBNETS
+"""""""""""""""
+def setup_course_subnet(project, course, network_name, cidr, gateway):
     nt = setup_neutronclient()
+    projects = get_projects(course)
+    try:
+        create_course_subnet.delay(list(projects['instructors'].values())[0], \
+            nt.find_resource('network', course + '-Instructors-' + network_name + '-Network')['id'], \
+            course + '-Instructors-' + network_name + '-Subnet', str(cidr), str(gateway))
+    except (neutronclient.common.exceptions.NotFound) as exc:
+        # Retry if network hasn't been created yet due to async celery tasks
+        raise self.retry(exc=exc)
 
-    project_ids = get_projects(course)
-    instructor_network_name = course + "-Instructors-" + network_name + "-Network"
-    instructor_subnet_name = course + "-Instructors-" + network_name + "-Subnet"
-    instructor_subnet_body = {'subnet':
-                                {'name': instructor_subnet_name,
-                                  'cidr': subnet,
-                                  'ip_version': 4, 
-                                  'gateway_ip': gateway,
-                                  'network_id': nt.list_networks(name=instructor_network_name)['networks'][0]['id'],
-                                  'project_id': list(project_ids['instructors'].values())[0]}}
-    instructor_subnet = nt.create_subnet(body=instructor_subnet_body)
-
-    for student in project_ids['students']:
-        student_network_name = student + "-" + network_name + "-Network"
-        student_subnet_name = student + "-" + network_name + "-Subnet"
-        student_subnet_body = {'subnet':
-                                   {'name': student_subnet_name,
-                                    'cidr': subnet,
-                                    'ip_version': 4,
-                                    'gateway_ip': gateway,
-                                    'network_id': nt.list_networks(name=student_network_name)['networks'][0]['id'],
-                                    'project_id': project_ids['students'][student]}}
-        nt.create_subnet(body=student_subnet_body)
-
-    instructor_subnet_id = nt.list_subnets(name=instructor_subnet_name)['subnets'][0]['id']
-    create_course_network_router(project_ids, course, network_name, instructor_subnet_id)
+    for project in projects['students']:
+        try:
+            create_course_subnet.delay(projects['students'][project], \
+                    nt.find_resource('network', project + '-' + network_name + '-Network')['id'], \
+                    project + '-' + network_name + '-Subnet', str(cidr), str(gateway))
+        except (neutronclient.common.exceptions.NotFound) as exc:
+            raise self.retry(exc=exc)
 
 
+@celery.task(bind=True)
+def create_course_subnet(self, project_id, network_id, subnet_name, cidr, gateway):
+    nt = setup_neutronclient()
+    if not nt.create_subnet(body={'subnet': {'name': subnet_name, 'cidr': cidr, 'gateway_ip': gateway, 'ip_version': 4, 'network_id': network_id, 'project_id': project_id}}):
+        return {'task': 'Create Subnet', 'status': 'Failed', 'result': 'Could not create subnet ' + subnet_name} 
+    return {'task': 'Create Subnet', 'status': 'Complete', 'result': 'Created subnet ' + subnet_name}
+
+
+
+"""""""""""""""
+CREATE ROUTERS
+"""""""""""""""
 def create_course_network_router(project_ids, course, network_name, subnet_id):
     nt = setup_neutronclient()
 
@@ -190,6 +185,18 @@ def delete_course_network_router(network):
         nt.delete_router(student_router_id)
 
 
+###########
+# WRAPPER #
+###########
+
+@celery.task(bind=True)
+def network_create_wrapper(project, course, network_name, cidr, gateway):
+    check_network_name(course, network_name)
+    setup_course_network(project, course, network_name)
+    setup_course_subnet(project, course, network_name, cidr, gateway)
+
+
+            
 def toggle_network_dhcp(network, change):
     nt = setup_neutronclient()
 

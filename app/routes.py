@@ -13,13 +13,16 @@ from app import glance_model as glance
 from app import celery_model as worker
 from app import email_model as email
 from app import exceptions as exceptions
+from celery.task.control import inspect
 import re
 import pprint
 
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course))
+    jobs = inspect()
+    print(jobs.active())
+    return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course), active_jobs=jobs.active(), scheduled_jobs=jobs.scheduled())
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -163,27 +166,34 @@ def network_panel():
 def create_networks():
     form = CreateNetworkForm()
     if form.validate_on_submit():
+        cidr = form.check_cidr()
+        gateway = form.set_gateway(cidr)
+
         try:
-            new_network = neutron.create_course_network(current_user.project, current_user.course, form.network_name.data)
+            neutron.network_create_wrapper(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
         except exceptions.NetworkNameAlreadyExists as e:
             flash(e)
             cache.clear()
             return redirect(url_for('create_networks'))
-        except Exception as e:
-            return render_template("500.html", error=str(e))
 
-        cidr = form.check_cidr()
-        gateway = form.set_gateway(cidr)
+        #try:
+        #    neutron.check_network_name(current_user.course, form.network_name.data)
+        #except exceptions.NetworkNameAlreadyExists as e:
+        #    flash(e)
+        #    cache.clear()
+        #    return redirect(url_for('create_networks'))
+        #
+        #neutron.setup_course_network(current_user.project, current_user.course, form.network_name.data)
+        #
+        #cidr = form.check_cidr()
+        #gateway = form.set_gateway(cidr)
 
-        if cidr != False and gateway != False:
-            try:
-                neutron.create_course_subnet(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
-            except Exception as e:
-                return render_template("500.html", error=str(e))
+#        if cidr != False and gateway != False:
+#            neutron.setup_course_subnet(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
 
-            flash('Successfully created new networks')
-            cache.clear()
-            return redirect(url_for('network_panel'))
+        flash('Network creation in progress')
+        cache.clear()
+        return redirect(url_for('index'))
 
     form.network_address.default = '192.168.0.0'
     form.process()
