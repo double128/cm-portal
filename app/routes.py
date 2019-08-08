@@ -166,30 +166,17 @@ def network_panel():
 def create_networks():
     form = CreateNetworkForm()
     if form.validate_on_submit():
-        cidr = form.check_cidr()
-        gateway = form.set_gateway(cidr)
-
         try:
-            neutron.network_create_wrapper(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
+            neutron.check_network_name(current_user.course, form.network_name.data)
         except exceptions.NetworkNameAlreadyExists as e:
             flash(e)
             cache.clear()
             return redirect(url_for('create_networks'))
+        
+        cidr = form.check_cidr()
+        gateway = form.set_gateway(cidr)
 
-        #try:
-        #    neutron.check_network_name(current_user.course, form.network_name.data)
-        #except exceptions.NetworkNameAlreadyExists as e:
-        #    flash(e)
-        #    cache.clear()
-        #    return redirect(url_for('create_networks'))
-        #
-        #neutron.setup_course_network(current_user.project, current_user.course, form.network_name.data)
-        #
-        #cidr = form.check_cidr()
-        #gateway = form.set_gateway(cidr)
-
-#        if cidr != False and gateway != False:
-#            neutron.setup_course_subnet(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
+        neutron.network_create_wrapper(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
 
         flash('Network creation in progress')
         cache.clear()
@@ -274,10 +261,7 @@ def delete_network(network_id, network_name):
 
     if form.validate_on_submit():
         if form.accept_delete.data:
-            if this_network['router']:
-                neutron.delete_course_network_router(this_network)
-
-            neutron.delete_course_network(current_user.project, current_user.course, this_network)
+            neutron.network_delete_wrapper(current_user.project, current_user.course, this_network)
             flash("Network has been successfully deleted")
             cache.clear()
             return redirect(url_for('network_panel'))
@@ -332,8 +316,7 @@ def clean_html_tags(html):
 @app.route('/test', methods=['GET', 'POST'])
 @login_required
 def testing():
-    #keystone.add_role('100111111', 'INFR-1111-100111111', 'INFR-1111')
-    keystone.get_instructor_project_users(current_user.course, current_user.project)
+    #neutron.celery_test()
     return render_template('testing.html')
 
 
