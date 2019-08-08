@@ -94,6 +94,18 @@ def create_course_network(project, course, network_name):
         nt.create_network(body=student_network_body)
 
 
+def verify_network_name(course, network_name):
+    nt = setup_neutronclient()
+    instructor_network_name = course + "-Instructors-" + network_name + "-Network"
+    try:
+        if nt.list_networks(name=instructor_network_name)['networks'][0]['id']:
+            raise NetworkNameAlreadyExists("A network named \"" + network_name + "\" already exists. Please use another name.")
+    except IndexError:
+        # If this is thrown, it means there's no networks with this name
+        pass
+
+
+
 def delete_course_network(project, course, network):
     nt = setup_neutronclient()
 

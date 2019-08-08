@@ -173,9 +173,10 @@ def get_course_student_info(project, course):
     projects = get_projects(course)
     instructor_project_id = list(projects['instructors'].values())[0]
     role_assignments_list = ks.role_assignments.list(project=instructor_project_id)
-    
+    user_list = get_users()
+
     user_info_dict = {}
-    for student_username in get_users():
+    for student_username in user_list:
         if projects['students'].get(course + '-' + student_username):
             user_info_dict[student_username] = course + '-' + student_username
 
@@ -193,12 +194,12 @@ def reset_user_password(username):
 def set_student_as_ta(username, course):
     ks = get_keystone_session()
     project_list = get_projects(course)
+    instructor_project_id = list(project_list['instructors'].values())[0]
     
     # Project should exist at all times if the student is not a TA, but we check anyways
     # FOR REFERENCE: .get() will return "None" if that key does not exist, instead of causing a stack trace, so use it for checks like this plz
     if project_list['students'].get(course + '-' + username):
         student_project_id = project_list['students'][course + '-' + username]
-        instructor_project_id = list(project_list['instructors'].values())[0]
         ks.projects.delete(project_list['students'][course + '-' + username])
         ks.roles.grant(utils.find_resource(ks.roles, 'user').id, user=get_user_id(username), project=instructor_project_id)
         # TODO: Also delete their networks, subnets, and routers
@@ -215,3 +216,17 @@ def get_instructor_project_users(course, project):
     print(ks.role_assignments.list(user=user_id, project=instructor_project_id))
     print(ks.role_assignments.list(user=user_id_other, project=instructor_project_id))
 
+def delete_users(username_list, course):
+    # Just remove their project, networks, subnets, and routers
+    ks = get_keystone_session()
+    role_assignments_list = ks.role_assignments.list(project=list(get_projects(course)['instructors'].values())[0])
+    project_list = get_projects(course)
+    user_role_id = utils.find_resource(ks.roles, 'user').id
+
+    for username in username_list:
+        user_id = get_user_id(username)
+        # if user is a TA
+        if user_id in [u.user['id'] for u in role_assignments_list]:
+            ks.roles.revoke(role=user_role_id, user=user_id, project=list(get_projects(course)['instructors'].values())[0])
+        else:
+            ks.projects.delete(project_list['students'][course + '-' + username])

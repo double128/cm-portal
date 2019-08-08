@@ -84,10 +84,37 @@ def course_management():
                 if submitted.data is True and submitted.type == "BooleanField":
                     keystone.set_student_as_ta(clean_html_tags(str(submitted.label)), current_user.course)
             flash("Student has been designated as a course TA")
-            course_student_list = keystone.get_course_student_info(current_user.project, current_user.course)
-            return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form)
+            return redirect(url_for('course_management'))
+        
+        elif form.delete_student.data is True:
+            to_delete = []
+            for submitted in form:
+                if submitted.data is True and submitted.type == "BooleanField":
+                    to_delete.append(clean_html_tags(str(submitted.label)))
+            session['to_delete'] = to_delete
+            return redirect(url_for('delete_students'))
 
     return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form)
+
+
+@app.route('/manage/delete', methods=['GET', 'POST'])
+@login_required
+def delete_students():
+    form = AcceptDeleteForm()
+    to_delete = session['to_delete']
+
+    if form.validate_on_submit():
+        if form.accept_delete.data:
+            keystone.delete_users(to_delete, current_user.course)
+            session.pop('to_delete')
+            flash('Users have been deleted')
+            return redirect(url_for('course_management'))
+
+        elif form.cancel.data:
+            session.pop('to_delete')
+            return redirect(url_for('course_management'))
+
+    return render_template('delete_students.html', form=form, to_delete=to_delete)
 
 
 @app.route('/manage/edit_quota', methods=['GET', 'POST'])

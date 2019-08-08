@@ -107,6 +107,7 @@ def create_student_checkbox_list(course_student_list):
 
     setattr(MultipleCheckboxField, 'reset_password', SubmitField('Reset Password'))
     setattr(MultipleCheckboxField, 'designate_as_ta', SubmitField('Designate Student as TA'))
+    setattr(MultipleCheckboxField, 'delete_student', SubmitField('Delete Student'))
     return MultipleCheckboxField()
         
 
