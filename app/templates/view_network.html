@@ -14,6 +14,7 @@
             <th>Network Name</th>
             <td>{{ this_network['name'] }}</td>
         </tr>
+	{% if this_network['subnets'] %}
         <tr>
             <th>Subnet Name</th>
             <td>{{ this_network['subnets']['name'] }}</td>
@@ -34,6 +35,28 @@
             <th>Gateway IP</th>
             <td>{{ this_network['subnets']['gateway_ip'] }}</td>
         </tr>
+	{% else %}
+        <tr>
+            <th>Subnet Name</th>
+	    <td>Pending</td>
+        </tr>
+        <tr>
+            <th>Subnet CIDR</th>
+	    <td>Pending</td>
+        </tr>
+        <tr>
+            <th>Address Pool</th>
+	    <td>Pending</td>
+        </tr>
+        <tr>
+            <th>Router Name</th>
+	    <td>Pending</td>
+        </tr>
+        <tr>
+            <th>Gateway IP</th>
+	    <td>Pending</td>
+        </tr>
+	{% endif %}
         <tr>
             <th>Time Created</th>
             <td>{{ this_network['created_at'].replace('T', ' ').replace('Z', ' ') }} UTC</td>
@@ -46,13 +69,14 @@
         <tr>
             <th>Configurations</th>
         </tr>
+	<tr>
+            <th>Port Security Set</th>
+            <td>{{ this_network['port_security_enabled'] }}</td>
+        </tr>
+	{% if this_network['subnets'] %}
         <tr>
             <th>DHCP Enabled</th>
             <td>{{ this_network['subnets']['enable_dhcp'] }}</td>
-        </tr>
-        <tr>
-            <th>Port Security Set</th>
-            <td>{{ this_network['port_security_enabled'] }}</td>
         </tr>
         <tr>
             <th>Internet Enabled</th>
@@ -64,7 +88,16 @@
             {% endif %}
             </td>
         </tr>
-
+	{% else %}
+        <tr>
+            <th>DHCP Enabled</th>
+            <td>Pending</td>
+        </tr>
+	<tr>
+	    <th>Internet Enabled</th>
+	    <td>Pending</td>
+	</tr>
+	{% endif %}
     </table>
     <hr>
     <a href={{ url_for('modify_network', network_id=this_network['id'], network_name=network_name) }}>Modify Network</a>

@@ -4,7 +4,9 @@ from keystoneauth1.identity import v3
 from keystoneauth1 import session
 from keystoneclient.v3 import client as keystoneclient
 from keystoneclient import utils 
-import pprint 
+import pprint
+import re
+import json
 
 class OpenStackUser(UserMixin):
     id = None
@@ -23,6 +25,16 @@ class OpenStackUser(UserMixin):
         self.id = id
         self.project = 'INFR-' + course_id + '-Instructors'
         self.course = 'INFR-' + course_id
+
+        # Some pseudocode for later:
+        #IF course_is_running THEN 
+        #   IF course_id = running_course_id THEN
+        #       Continue 
+        #   ELSE
+        #       Tell to come back later
+        #   Else
+        #       Continue
+        
         auth = v3.Password(auth_url=app.config['OS_ENDPOINT_URL'], 
                            username=id,
                            password=password,
@@ -69,16 +81,46 @@ def get_users():
     return users
 
 
+def get_course_users(course):
+    ks = get_keystone_session()
+    projects = get_projects(course)
+    instructor_project_name = list(projects['instructors'].keys())[0]
+    instructor_project_id = list(projects['instructors'].values())[0]
+    user_list = ks.users.list()
+    role_assignments_list = ks.role_assignments.list(role=utils.find_resource(ks.roles, 'user').id)
+    
+    role_dict = {}
+    for role in role_assignments_list:
+        role_dict[role.user['id']] = role.scope['project']['id']
+    
+    user_dict = {}
+    for user in user_list:
+        if '100' in user.name or '@' in user.name:
+            if user.id in role_dict:
+                project_name = course + '-' + user.name
+                if project_name in projects['students']:
+                    if role_dict[user.id] == projects['students'][project_name]:
+                        user_dict[user.name] = project_name
+                else:
+                    if role_dict[user.id] == instructor_project_id:
+                        user_dict[user.name] = instructor_project_name
+    return user_dict
+
+        
+def get_username_from_id(user_id):
+    ks = get_keystone_session()
+    return utils.find_resource(ks.users, user_id).name
+
+
 def get_user_id(username):
-    users = get_users()
-    if users[username]:
-        return users[username]
-    else:
-        return None
+    ks = get_keystone_session()
+    return utils.find_resource(ks.users, username).id
+
 
 def get_user_email(username):
     ks = get_keystone_session()
     return utils.find_resource(ks.users, username).email
+
 
 def get_projects(course):
     ks = get_keystone_session()
@@ -90,6 +132,11 @@ def get_projects(course):
             else:
                 projects['students'][p.name] = p.id
     return projects
+
+
+def get_project_id(project):
+    ks = get_keystone_session()
+    return utils.find_resource(ks.projects, project).id
 
 
 def get_project_role(user_id, project_id):
@@ -166,24 +213,6 @@ def process_new_users(self, course, username, email):
         return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not add user role for ' + username + ' to project ' + project}
 
     return {'task': 'Process User', 'status': 'Complete', 'result': 'Processed user ' + username + ' with project ' + project}
-        
-
-def get_course_student_info(project, course):
-    ks = get_keystone_session()
-    projects = get_projects(course)
-    instructor_project_id = list(projects['instructors'].values())[0]
-    role_assignments_list = ks.role_assignments.list(project=instructor_project_id)
-    user_list = get_users()
-
-    user_info_dict = {}
-    for student_username in user_list:
-        if projects['students'].get(course + '-' + student_username):
-            user_info_dict[student_username] = course + '-' + student_username
-
-        elif get_user_id(student_username) in [u.user['id'] for u in role_assignments_list]:
-            user_info_dict[student_username] = list(projects['instructors'].keys())[0]
- 
-    return user_info_dict
 
 
 def reset_user_password(username):
@@ -205,17 +234,6 @@ def set_student_as_ta(username, course):
         # TODO: Also delete their networks, subnets, and routers
 
 
-def get_instructor_project_users(course, project):
-    ks = get_keystone_session()
-    project_list = get_projects(course)
-    instructor_project_id = list(project_list['instructors'].values())[0]
-
-    user_id = get_user_id('100111111')
-    user_id_other = get_user_id('100222222')
-
-    print(ks.role_assignments.list(user=user_id, project=instructor_project_id))
-    print(ks.role_assignments.list(user=user_id_other, project=instructor_project_id))
-
 def delete_users(username_list, course):
     # Just remove their project, networks, subnets, and routers
     ks = get_keystone_session()
@@ -230,3 +248,5 @@ def delete_users(username_list, course):
             ks.roles.revoke(role=user_role_id, user=user_id, project=list(get_projects(course)['instructors'].values())[0])
         else:
             ks.projects.delete(project_list['students'][course + '-' + username])
+
+

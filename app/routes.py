@@ -20,9 +20,10 @@ import pprint
 @app.route('/')
 @login_required
 def index():
-    jobs = inspect()
-    print(jobs.active())
-    return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course), active_jobs=jobs.active(), scheduled_jobs=jobs.scheduled())
+    #jobs = inspect()
+    #print(jobs.active())
+    #return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course), active_jobs=jobs.active(), scheduled_jobs=jobs.scheduled())
+    return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course))
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -72,7 +73,8 @@ def upload():
 @login_required
 def course_management():
     from app.forms import create_student_checkbox_list
-    course_student_list = keystone.get_course_student_info(current_user.project, current_user.course)
+    #course_student_list = keystone.get_course_student_info(current_user.project, current_user.course)
+    course_student_list = keystone.get_course_users(current_user.course)
     form = create_student_checkbox_list(course_student_list)
     
     if form.validate_on_submit():
@@ -152,8 +154,6 @@ def edit_quota():
 
 @app.route('/networks', methods=['GET', 'POST'])
 @login_required
-#@cache.cached(timeout=60)
-@cache.cached(timeout=10)
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.project, current_user.course)
     # We're going to pass this to the specific network view through a session variable
@@ -170,7 +170,6 @@ def create_networks():
             neutron.check_network_name(current_user.course, form.network_name.data)
         except exceptions.NetworkNameAlreadyExists as e:
             flash(e)
-            cache.clear()
             return redirect(url_for('create_networks'))
         
         cidr = form.check_cidr()
@@ -179,7 +178,6 @@ def create_networks():
         neutron.network_create_wrapper(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
 
         flash('Network creation in progress')
-        cache.clear()
         return redirect(url_for('index'))
 
     form.network_address.default = '192.168.0.0'
@@ -191,14 +189,6 @@ def create_networks():
 @app.route('/networks/<network_name>_<network_id>', methods=['GET', 'POST'])
 @login_required
 def view_network(network_id, network_name):
-    prev = request.referrer
-    if prev:
-        if 'edit' in prev:
-            # Update the session variable, because we updated the network details and need to pull new data
-            # TODO: Maybe make this check ONLY update the network that was modified
-            networks_list = neutron.list_project_network_details(current_user.project, current_user.course)
-            session['networks_list'] = networks_list
-
     networks_list = session['networks_list']
     this_network = networks_list[network_name]
 
@@ -229,17 +219,15 @@ def modify_network(network_id, network_name):
             internet_toggle_change = form.check_if_changed(form.internet_access_toggle.data, prev_internet_access_toggle)
 
             if dhcp_toggle_change is True:
-                #neutron.toggle_network_dhcp(current_user.course, network_name, subnet_id, form.dhcp_toggle.data)
                 neutron.toggle_network_dhcp(this_network, form.dhcp_toggle.data)
 
             if ps_toggle_change is True:
                 neutron.toggle_network_port_security(this_network, form.port_security_toggle.data)
 
             if internet_toggle_change is True:
-                neutron.toggle_network_internet_access(current_user.course, this_network, network_name, form.internet_access_toggle.data)
+                neutron.toggle_network_internet_access(current_user.project, current_user.course, this_network, network_name, form.internet_access_toggle.data)
 
             flash("Network configurations have been successfully updated")
-            cache.clear()
             return redirect(url_for('view_network', network_name=network_name, network_id=network_id))
 
     if request.method == 'GET':
@@ -256,16 +244,20 @@ def modify_network(network_id, network_name):
 def delete_network(network_id, network_name):
     networks_list = session['networks_list']
     this_network = networks_list[network_name]
-    subnet_id = this_network['subnets']['id']
+    try:
+        subnet_id = this_network['subnets']['id']
+    except TypeError:
+        flash("Network create task has not finished yet. Please wait until the network has finished being created before deleting it.")
+        return redirect(url_for('network_panel'))
+    
     form = AcceptDeleteForm()
-
+    
     if form.validate_on_submit():
         if form.accept_delete.data:
             neutron.network_delete_wrapper(current_user.project, current_user.course, this_network)
-            flash("Network has been successfully deleted")
-            cache.clear()
+            flash('Network deletion in progress')
             return redirect(url_for('network_panel'))
-
+    
         elif form.cancel.data:
             return redirect(url_for('view_network', network_id=network_id, network_name=network_name))
 
@@ -316,7 +308,7 @@ def clean_html_tags(html):
 @app.route('/test', methods=['GET', 'POST'])
 @login_required
 def testing():
-    #neutron.celery_test()
+    keystone.get_course_users(current_user.course)
     return render_template('testing.html')
 
 
