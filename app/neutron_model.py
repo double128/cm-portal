@@ -1,7 +1,7 @@
 from app import celery
 from celery import group
-from .keystone_model import *
-from .exceptions import *
+from app.keystone_model import get_admin_session, get_projects
+from app.exceptions import *
 from neutronclient.v2_0 import client as neutronclient
 import re
 import pprint
@@ -17,7 +17,7 @@ def setup_neutronclient():
     return nt
 
 
-def list_project_network_details(project, course):
+def list_project_network_details(course):
     nt = setup_neutronclient()
     
     the_list = {}
@@ -62,6 +62,13 @@ def list_project_network_details(project, course):
                     for student_subnet in subnet_list:
                         if student_subnet_id == student_subnet['id']:
                             the_list[name]['children'][child_name]['subnets'] = student_subnet
+                    #TODO TODO TODO TODO
+                    # THIS ISN'T RETURNING THE VALUES PROPERLY
+                    # IF YOU HAVE MULTIPLE NETWORKS EVERY CHILD WILL HAVE THE FIRST PARSED ROUTER
+                    # WHAT THE FUCK
+                    # INSTRUCTOR IS FINE
+                    # I HATE THIS
+                    # TODO TODO TODO TODO
                     for student_router in router_list:
                         if child_name in student_router['name']:
                             the_list[name]['children'][child_name]['router'] = student_router
@@ -88,7 +95,6 @@ CREATE NETWORK
 def create_network(project_id, network_name):
     nt = setup_neutronclient()
     nt.create_network(body={'network': {'name': network_name, 'project_id': project_id, 'router:external': False}})
-    #return nt.find_resource('network', network_name)['id']
     return get_network_id(network_name)
 
 
@@ -106,7 +112,7 @@ CREATE SUBNET
 def create_subnet(project_id, network_id, subnet_name, cidr, gateway):
     nt = setup_neutronclient()
     nt.create_subnet(body={'subnet': {'name': subnet_name, 'cidr': cidr, 'gateway_ip': gateway, 'ip_version': 4, 'network_id': network_id, 'project_id': project_id}})
-    return nt.find_resource('subnet', subnet_name)['id']
+    return get_subnet_id(subnet_name)
 
 
 """
@@ -180,9 +186,9 @@ def async_network_create(self, project_id, network_name, subnet_name, router_nam
 
 
 def network_delete_wrapper(project, course, network):
-    all_networks = {project: {**network}, **network['children']}
-    all_networks[project].pop('children', None)
-    
+    #all_networks = {project: {**network}, **network['children']}
+    #all_networks[project].pop('children', None)
+    all_networks = merge_network_dicts(project, network)
     for network in all_networks:
         async_network_delete.delay(all_networks[network])
 
@@ -202,23 +208,46 @@ def async_network_delete(self, network):
     return {'task': 'Delete Network', 'status': 'Complete', 'result': 'Successfully deleted network for project ' + network['project_id']}
     
 
-def router_create_wrapper(project, course, network):
-    pass
+def router_create_wrapper(project, course, network_name, network):
+    nt = setup_neutronclient()
+    projects = get_projects(course)
+    all_projects = {**projects['instructors'], **projects['students']}
+    all_networks = merge_network_dicts(project, network)
+    external_network_id = nt.list_networks(name='HRL')['networks'][0]['id']
+    
+    for project in all_projects:
+        router_name = project + '-' + network_name + '-Router'
+        async_router_create.delay(all_projects[project], all_networks[project]['subnets']['id'], router_name, external_network_id)
+ 
 
-#@celery.task(bind=True)
-def async_router_create(self):
-    pass
+@celery.task(bind=True)
+def async_router_create(self, project_id, subnet_id, router_name, external_network_id):
+    nt = setup_neutronclient()
+    nt.create_router(body={'router': {'name': router_name, 'project_id': project_id, 'external_gateway_info': {'network_id': external_network_id}}})
+    router_id = nt.find_resource('router', router_name)['id']
+    nt.add_interface_router(router_id, body={'subnet_id': subnet_id})
 
-def router_delete_wrapper(project, course, network):
+
+def router_delete_wrapper(project, network):
+    all_networks = merge_network_dicts(project, network)
+    for network in all_networks:
+        async_router_delete.delay(all_networks[network]['router']['id'], all_networks[network]['subnets']['id'])
+
+
+@celery.task(bind=True)
+def async_router_delete(self, router_id, subnet_id):
+    nt = setup_neutronclient()
+    nt.remove_interface_router(router_id, body={'subnet_id': subnet_id})
+    nt.delete_router(router_id)
+
+
+""" 
+UTILITIES
+"""
+def merge_network_dicts(project, network):
     all_networks = {project: {**network}, **network['children']}
     all_networks[project].pop('children', None)
-    
-    for network in all_networks:
-        async_router_delete(all_networks['router']['id'], all_networks['subnets']['id'])
-
-def async_router_delete(self, router_id, subnet_id):
-        print(router_id)
-        print(subnet_id)
+    return all_networks
 
 """
 GETTERS
@@ -237,35 +266,60 @@ def get_router_id(router_name):
     nt = setup_neutronclient()
     return nt.find_resource('router', router_name)['id']
 
+def get_user_networks(project, course):
+    the_cooler_list = list_project_network_details(course)
+    print(the_cooler_list)
+
+    for key in the_cooler_list.keys():
+        network_id = the_cooler_list[key]['children'][project]['id']
+        subnet_id = the_cooler_list[key]['children'][project]['subnets']['id']
+        router_id = the_cooler_list[key]['children'][project]['router']['id']
+
+    #    print(the_cooler_list[key]['children'][project]['name'])
+     #   print(network_id)
+      #  print(the_cooler_list[key]['children'][project]['subnets']['name'])
+       # print(subnet_id)
+        #print(the_cooler_list[key]['children'][project]['router']['name'])
+        #print(router_id)
+
+
+    
+
 """
 TOGGLES
 """
-def toggle_network_dhcp(network, change):
+def toggle_network_dhcp(project, network, change):
     nt = setup_neutronclient()
+    all_networks = merge_network_dicts(project, network)
 
-    change_body = {'subnet': {'enable_dhcp': change}}
-    nt.update_subnet(network['subnets']['id'], change_body)
-
-    for student in network['children']:
-        nt.update_subnet(network['children'][student]['subnets']['id'], change_body)
+    for network in all_networks:
+        async_dhcp_toggle.delay(all_networks[network]['subnets']['id'], {'subnet': {'enable_dhcp': change}})
 
 
-def toggle_network_port_security(network, change):
+@celery.task(bind=True)
+def async_dhcp_toggle(self, subnet_id, body):
     nt = setup_neutronclient()
-    
-    change_body = {'network': {'port_security_enabled': change}}
-    nt.update_network(network['id'], change_body)
+    nt.update_subnet(subnet_id, body)
 
-    for student in network['children']:
-        nt.update_network(network['children'][student]['id'], change_body)
+
+def toggle_network_port_security(project, network, change):
+    nt = setup_neutronclient()
+    all_networks = merge_network_dicts(project, network)
+
+    for network in all_networks:
+        async_ps_toggle.delay(all_networks[network]['id'], {'network': {'port_security_enabled': change}})
+
+
+@celery.task(bind=True)
+def async_ps_toggle(self, network_id, body):
+    nt = setup_neutronclient()
+    nt.update_network(network_id, body)
 
 
 def toggle_network_internet_access(project, course, network, network_name, change):
     nt = setup_neutronclient()
     if change is False:
-        router_delete_wrapper(project, course, network)
+        router_delete_wrapper(project, network)
     elif change is True:
-        project_id = get_projects(course)
-        subnet_id = network['subnets']['id']
-        create_course_network_router(project_id, course, network_name, subnet_id)
+        router_create_wrapper(project, course, network_name, network)
 

@@ -92,10 +92,10 @@ def course_management():
             return redirect(url_for('course_management'))
         
         elif form.delete_student.data is True:
-            to_delete = []
+            to_delete = {}
             for submitted in form:
                 if submitted.data is True and submitted.type == "BooleanField":
-                    to_delete.append(clean_html_tags(str(submitted.label)))
+                    to_delete[clean_html_tags(str(submitted.label))] = clean_html_tags(str(submitted.description))
             session['to_delete'] = to_delete
             return redirect(url_for('delete_students'))
 
@@ -155,9 +155,7 @@ def edit_quota():
 @app.route('/networks', methods=['GET', 'POST'])
 @login_required
 def network_panel():
-    networks_list = neutron.list_project_network_details(current_user.project, current_user.course)
-    # We're going to pass this to the specific network view through a session variable
-    session['networks_list'] = networks_list
+    networks_list = neutron.list_project_network_details(current_user.course)
     return render_template('network.html', networks_list=networks_list)
 
 
@@ -189,8 +187,9 @@ def create_networks():
 @app.route('/networks/<network_name>_<network_id>', methods=['GET', 'POST'])
 @login_required
 def view_network(network_id, network_name):
-    networks_list = session['networks_list']
+    networks_list = neutron.list_project_network_details(current_user.course)
     this_network = networks_list[network_name]
+    session['this_network'] = this_network
 
     return render_template('view_network.html', this_network=this_network, network_id=network_id, network_name=network_name)
 
@@ -198,8 +197,8 @@ def view_network(network_id, network_name):
 @app.route('/networks/<network_name>_<network_id>/edit', methods=['GET', 'POST'])
 @login_required
 def modify_network(network_id, network_name):
-    networks_list = session['networks_list']
-    this_network = networks_list[network_name]
+    this_network = session['this_network']
+
     network_id = this_network['id']
     subnet_id = this_network['subnets']['id']
 
@@ -219,10 +218,10 @@ def modify_network(network_id, network_name):
             internet_toggle_change = form.check_if_changed(form.internet_access_toggle.data, prev_internet_access_toggle)
 
             if dhcp_toggle_change is True:
-                neutron.toggle_network_dhcp(this_network, form.dhcp_toggle.data)
+                neutron.toggle_network_dhcp(current_user.project, this_network, form.dhcp_toggle.data)
 
             if ps_toggle_change is True:
-                neutron.toggle_network_port_security(this_network, form.port_security_toggle.data)
+                neutron.toggle_network_port_security(current_user.project, this_network, form.port_security_toggle.data)
 
             if internet_toggle_change is True:
                 neutron.toggle_network_internet_access(current_user.project, current_user.course, this_network, network_name, form.internet_access_toggle.data)
@@ -242,8 +241,8 @@ def modify_network(network_id, network_name):
 @app.route('/networks/<network_name>_<network_id>/delete', methods=['GET', 'POST'])
 @login_required
 def delete_network(network_id, network_name):
-    networks_list = session['networks_list']
-    this_network = networks_list[network_name]
+    #networks_list = session['networks_list']
+    this_network = session['this_network']
     try:
         subnet_id = this_network['subnets']['id']
     except TypeError:

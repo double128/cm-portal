@@ -183,7 +183,6 @@ def add_role(username, project, course):
 
     if not uid or not pid:
         return False
-    #if not ks.role_assignments.list(project=pid, role=user_role_id):
     if not get_project_role(uid, pid):
         keystone = get_keystone_session()
         result = keystone.roles.grant(user_role_id, user=uid, project=pid)
@@ -234,19 +233,36 @@ def set_student_as_ta(username, course):
         # TODO: Also delete their networks, subnets, and routers
 
 
-def delete_users(username_list, course):
+def delete_users(to_delete, course):
     # Just remove their project, networks, subnets, and routers
     ks = get_keystone_session()
-    role_assignments_list = ks.role_assignments.list(project=list(get_projects(course)['instructors'].values())[0])
-    project_list = get_projects(course)
+    user_list = get_course_users(course)
     user_role_id = utils.find_resource(ks.roles, 'user').id
 
-    for username in username_list:
-        user_id = get_user_id(username)
-        # if user is a TA
-        if user_id in [u.user['id'] for u in role_assignments_list]:
-            ks.roles.revoke(role=user_role_id, user=user_id, project=list(get_projects(course)['instructors'].values())[0])
+    for username in to_delete:
+        if 'nstructors' in to_delete[username]:
+            pass
+            #ks.roles.revoke(role=user_role_id, user=get_user_id(username), project=get_project_id(to_delete[username]))
         else:
-            ks.projects.delete(project_list['students'][course + '-' + username])
+            from app.neutron_model import get_user_networks
+            get_user_networks(to_delete[username], course)
+    
 
+    #role_assignments_list = ks.role_assignments.list(project=list(get_projects(course)['instructors'].values())[0])
+    #project_list = get_projects(course)
+
+    #for username in username_list:
+    #    user_id = get_user_id(username)
+    #    if user_id in [u.user['id'] for u in role_assignments_list]:
+    #        pass
+            #ks.roles.revoke(role=user_role_id, user=user_id, project=list(get_projects(course)['instructors'].values())[0])
+    #    else:
+    #        from app.neutron_model import get_user_networks
+    #        get_user_networks(get_user_id
+            #nt.list_networks(project_id=project_list['students'][course + '-' + username])
+            #print(nt.list_networks)
+
+            #ks.projects.delete(project_list['students'][course + '-' + username])
+
+    
 
