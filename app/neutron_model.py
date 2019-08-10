@@ -62,21 +62,12 @@ def list_project_network_details(course):
                     for student_subnet in subnet_list:
                         if student_subnet_id == student_subnet['id']:
                             the_list[name]['children'][child_name]['subnets'] = student_subnet
-                    #TODO TODO TODO TODO
-                    # THIS ISN'T RETURNING THE VALUES PROPERLY
-                    # IF YOU HAVE MULTIPLE NETWORKS EVERY CHILD WILL HAVE THE FIRST PARSED ROUTER
-                    # WHAT THE FUCK
-                    # INSTRUCTOR IS FINE
-                    # I HATE THIS
-                    # TODO TODO TODO TODO
                     for student_router in router_list:
-                        if child_name in student_router['name']:
+                        if child_name in student_router['name'] and name in student_router['name'] and course in student_router['name']:
                             the_list[name]['children'][child_name]['router'] = student_router
-            except IndexError: # Subnet creation hasn't completed yet, so don't let the network display in the table yet
+            except IndexError: # Subnet creation hasn't completed yet (due to async with celery), so don't let the network display in the table yet
                 the_list[name]['subnets'] = None
-
     return the_list
-    # Has this been fully optimized/fixed? I have no idea. Just LEAVE IT.
 
 
 def check_network_name(course, network_name):
@@ -266,24 +257,23 @@ def get_router_id(router_name):
     nt = setup_neutronclient()
     return nt.find_resource('router', router_name)['id']
 
-def get_user_networks(project, course):
-    the_cooler_list = list_project_network_details(course)
-    print(the_cooler_list)
 
+"""
+KEYSTONE_MODEL DELETE USER NETWORKS
+"""
+
+@celery.task(bind=True)
+def async_delete_user_networks(self, the_cooler_list, user_project):
+    nt = setup_neutronclient()
     for key in the_cooler_list.keys():
-        network_id = the_cooler_list[key]['children'][project]['id']
-        subnet_id = the_cooler_list[key]['children'][project]['subnets']['id']
-        router_id = the_cooler_list[key]['children'][project]['router']['id']
+        if user_project in the_cooler_list[key]['children']:
+            if 'router' in the_cooler_list[key]['children'][user_project]:
+                router_id = the_cooler_list[key]['children'][user_project]['router']['id']
+                nt.remove_interface_router(router_id, body={'subnet_id': the_cooler_list[key]['children'][user_project]['subnets']['id']})
+                nt.delete_router(router_id)
+        
+            nt.delete_network(the_cooler_list[key]['children'][user_project]['id'])
 
-    #    print(the_cooler_list[key]['children'][project]['name'])
-     #   print(network_id)
-      #  print(the_cooler_list[key]['children'][project]['subnets']['name'])
-       # print(subnet_id)
-        #print(the_cooler_list[key]['children'][project]['router']['name'])
-        #print(router_id)
-
-
-    
 
 """
 TOGGLES

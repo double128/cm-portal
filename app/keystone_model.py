@@ -104,7 +104,7 @@ def get_course_users(course):
                 else:
                     if role_dict[user.id] == instructor_project_id:
                         user_dict[user.name] = instructor_project_name
-    return user_dict
+    return dict(sorted(user_dict.items())) # Return list alphabetically
 
         
 def get_username_from_id(user_id):
@@ -238,14 +238,15 @@ def delete_users(to_delete, course):
     ks = get_keystone_session()
     user_list = get_course_users(course)
     user_role_id = utils.find_resource(ks.roles, 'user').id
+    project_list = get_projects(course)
 
     for username in to_delete:
         if 'nstructors' in to_delete[username]:
-            pass
-            #ks.roles.revoke(role=user_role_id, user=get_user_id(username), project=get_project_id(to_delete[username]))
+            ks.roles.revoke(role=user_role_id, user=get_user_id(username), project=get_project_id(to_delete[username]))
         else:
-            from app.neutron_model import get_user_networks
-            get_user_networks(to_delete[username], course)
+            from app.neutron_model import async_delete_user_networks, list_project_network_details
+            async_delete_user_networks.delay(list_project_network_details(course), to_delete[username])
+            ks.projects.delete(project_list['students'][course + '-' + username])
     
 
     #role_assignments_list = ks.role_assignments.list(project=list(get_projects(course)['instructors'].values())[0])

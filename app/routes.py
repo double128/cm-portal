@@ -64,6 +64,7 @@ def upload():
         filename = secure_filename(form.file.data.filename)
         form.file.data.save('uploads/' + filename)
         process_csv(current_user.course, 'uploads/' + filename)
+        flash('Course list upload in progress')
         return redirect(url_for('index'))
 
     return render_template('upload.html', form=form)
@@ -73,7 +74,7 @@ def upload():
 @login_required
 def course_management():
     from app.forms import create_student_checkbox_list
-    #course_student_list = keystone.get_course_student_info(current_user.project, current_user.course)
+    #course_student_list = dict(sorted(keystone.get_course_users(current_user.course).items()))
     course_student_list = keystone.get_course_users(current_user.course)
     form = create_student_checkbox_list(course_student_list)
     
