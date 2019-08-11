@@ -227,10 +227,11 @@ def set_student_as_ta(username, course):
     # Project should exist at all times if the student is not a TA, but we check anyways
     # FOR REFERENCE: .get() will return "None" if that key does not exist, instead of causing a stack trace, so use it for checks like this plz
     if project_list['students'].get(course + '-' + username):
+        from app.neutron_model import async_delete_user_networks, list_project_network_details
         student_project_id = project_list['students'][course + '-' + username]
+        async_delete_user_networks(list_project_network_details(course), course + '-' + username)
         ks.projects.delete(project_list['students'][course + '-' + username])
         ks.roles.grant(utils.find_resource(ks.roles, 'user').id, user=get_user_id(username), project=instructor_project_id)
-        # TODO: Also delete their networks, subnets, and routers
 
 
 def delete_users(to_delete, course):
