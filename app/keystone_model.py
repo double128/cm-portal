@@ -22,14 +22,11 @@ class OpenStackUser(UserMixin):
     project = None
     course = None
     
-    def __init__(self):
-        return
-
     def login(self, id, password, course_id):
         self.id = id
         self.project = 'INFR-' + course_id + '-Instructors'
         self.course = 'INFR-' + course_id
-
+    
         auth = v3.Password(auth_url=app.config['OS_ENDPOINT_URL'], 
                            username=id,
                            password=password,
@@ -44,28 +41,35 @@ class OpenStackUser(UserMixin):
             raise exceptions.http.Unauthorized(e)
         
         try:
-            check_if_course_running(self.course)
+            self.check_if_course_running()
         except ClassInSession as e:
-            raise ClassInSession(e)
+            raise ClassInSession(e.start_time, e.end_time, e.message)
 
         self.is_authenticated = True
         login.users[id] = self
+    
+    def check_if_course_running(self):
+        from app.models import convert_utc_to_eastern
+        weekday = datetime.datetime.today().weekday()
+        #current_time = datetime.datetime.utcnow().time()
+        current_time = datetime.time(18, 0, 0)
+
+        try:
+            check = Course.query.filter_by(course=self.course).first()
+        except AttributeError:
+            check = None
         
+        schedule = Schedule.query.all()
+        for time in schedule:
+            if time.weekday == weekday:
+                if time.start_time < current_time < time.end_time:
+                    if hasattr(check, 'id'):
+                        if not time.course_info == check.id:
+                           raise ClassInSession(start_time=convert_utc_to_eastern(time.start_time), end_time=convert_utc_to_eastern(time.end_time), message=None)
+                    else:
+                       raise ClassInSession(start_time=convert_utc_to_eastern(time.start_time), end_time=convert_utc_to_eastern(time.end_time), message=None)
 
-def check_if_course_running(user_course):
-    weekday = datetime.datetime.today().weekday()
-    current_time = datetime.datetime.utcnow().time()
-    #current_time = datetime.time(1, 0, 0)
-
-    check = Course.query.filter_by(course=user_course).first()
-    schedule = check.scheduled_times.all()
-    for time in schedule:
-        if time.weekday == weekday:
-            if time.start_time < current_time < time.end_time:
-                return True
-            else:
-                raise ClassInSession("A class is currently in session.")
-
+        
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
               K    E    Y    S    T    O    N    E

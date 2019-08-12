@@ -1,10 +1,7 @@
 import calendar
-#from datetime import time
 import datetime
-#import time
-#import datetime as dt
-#from datetime import date, timedelta, datetime
-
+from dateutil import tz
+import pytz
 # JUST TESTING SOME STUFF, LEARNING HOW 2 USE DATETIME, I DON'T LIKE THIS
 
 def get_dates_for_weekday(day):
@@ -27,3 +24,18 @@ def set_datetime_variables(start_hour, start_minute, end_hour, end_minute):
     return time_range
 
 
+
+utc_time = datetime.time(19, 0, 0)
+utc_time = datetime.datetime.combine(datetime.date.today(), utc_time)
+print(utc_time)
+
+#utc_time = utc_time.strftime('%H:%M:%S')
+eastern_time = pytz.timezone('America/Toronto')
+
+
+print(pytz.utc.localize(utc_time, is_dst=None).astimezone(eastern_time))
+
+#tz = pytz.timezone('America/Toronto')
+#utc_time = utc_time.replace(tzinfo=tz)
+#print(utc_time)
+#print(utc.replace(tzinfo=datetime.datetime.timezone.utc).astimezone(tz=to_zone))

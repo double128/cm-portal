@@ -43,10 +43,10 @@ def login():
         try:
             osession.login(form.username.data, form.password.data, str(form.course.data))
         except keystone.exceptions.http.Unauthorized:
-            flash('Your account is not authorized to access this panel.')
+            flash('Login failed.')
             return redirect(url_for('login'))
         except exceptions.ClassInSession as e:
-            flash(e)
+            flash(e.message)
             return redirect(url_for('login'))
 
         login_user(osession)
@@ -321,14 +321,15 @@ def testing():
     #c = Course.query.filter_by(course=current_user.course).first()
     #if not c:
     #    print("No course found, creating one")
-    #    new_course = Course(course=current_user.course, instructor=current_user.id)
-    #    db.session.add(new_course)
-    #    db.session.commit()
+    #new_course = Course(course=current_user.course, instructor=current_user.id)
+    #db.session.add(new_course)
+    #db.session.commit()
     
     #db_course_id = Course.query.filter_by(course=current_user.course).first().id
 
     # 3:40 - 5:00 PM EDT / 7:40 - 9:00 PM UTC / 19:40 - 21:00 UTC
     #time_range = set_datetime_variables(19, 40, 21, 0) 
+    #time_range = set_datetime_variables(15, 10, 18, 0) 
     
     #t = Schedule.query.all()
     #if not t:
@@ -337,11 +338,11 @@ def testing():
     #    db.session.add(new_time)
     #    db.session.commit()
     
-   # db_course_id = Course.query.filter_by(course=current_user.course).first().id
-   # time_range = set_datetime_variables(17, 0, 22, 0)
-   # new_time = Schedule(weekday=0, start_time=time_range['start'], end_time=time_range['end'], course_info=db_course_id)
-   # db.session.add(new_time)
-   # db.session.commit()
+    #db_course_id = Course.query.filter_by(course=current_user.course).first().id
+    #time_range = set_datetime_variables(15, 10, 18, 0)
+    #new_time = Schedule(weekday=0, start_time=time_range['start'], end_time=time_range['end'], course_info=db_course_id)
+    #db.session.add(new_time)
+    #db.session.commit()
 
     #times = db_course.scheduled_times.all()
     #for t in times:
@@ -349,7 +350,6 @@ def testing():
     #    print(t.end_time)
     #    print(t.weekday)
     
-    keystone.check_if_course_running(current_user.course)
     return render_template('testing.html')
 
 
