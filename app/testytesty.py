@@ -27,4 +27,3 @@ def set_datetime_variables(start_hour, start_minute, end_hour, end_minute):
     return time_range
 
 
-print(set_datetime_variables(16, 40, 19, 0))

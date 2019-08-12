@@ -2,11 +2,15 @@ from app import app, login, celery
 from flask_login import UserMixin
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
+from keystoneauth1 import exceptions
 from keystoneclient.v3 import client as keystoneclient
 from keystoneclient import utils 
+from app.db_model import Course, Schedule
+from app.exceptions import ClassInSession
 import pprint
 import re
 import json
+import datetime 
 
 class OpenStackUser(UserMixin):
     id = None
@@ -26,31 +30,41 @@ class OpenStackUser(UserMixin):
         self.project = 'INFR-' + course_id + '-Instructors'
         self.course = 'INFR-' + course_id
 
-        # Some pseudocode for later:
-        #IF course_is_running THEN 
-        #   IF course_id = running_course_id THEN
-        #       Continue 
-        #   ELSE
-        #       Tell to come back later
-        #   Else
-        #       Continue
-        
         auth = v3.Password(auth_url=app.config['OS_ENDPOINT_URL'], 
                            username=id,
                            password=password,
                            project_name=self.project,
                            user_domain_name=app.config['OS_DOMAIN'],
                            project_domain_name=app.config['OS_PROJECT_DOMAIN'])
+
         try:
             sess = session.Session(auth=auth)
-            if auth.get_token(session=sess):
-                self.is_authenticated = True
-                login.users[id] = self
+            auth.get_token(session=sess)
+        except exceptions.http.Unauthorized as e:
+            raise exceptions.http.Unauthorized(e)
+        
+        try:
+            check_if_course_running(self.course)
+        except ClassInSession as e:
+            raise ClassInSession(e)
+
+        self.is_authenticated = True
+        login.users[id] = self
+        
+
+def check_if_course_running(user_course):
+    weekday = datetime.datetime.today().weekday()
+    current_time = datetime.datetime.utcnow().time()
+    #current_time = datetime.time(1, 0, 0)
+
+    check = Course.query.filter_by(course=user_course).first()
+    schedule = check.scheduled_times.all()
+    for time in schedule:
+        if time.weekday == weekday:
+            if time.start_time < current_time < time.end_time:
                 return True
             else:
-                return False
-        except:
-            return False
+                raise ClassInSession("A class is currently in session.")
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""

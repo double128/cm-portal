@@ -1,4 +1,5 @@
 from app import db
+import datetime
 
 class Course(db.Model):
     __tablename__ = 'course'
@@ -10,9 +11,6 @@ class Course(db.Model):
     def __repr__(self):
         return '<Course %s with Course ID %d>' % (self.course, self.id)
 
-    #def get_scheduled_times(self):
-    #
-
 
 class Schedule(db.Model):
     __tablename__= 'schedule'
@@ -23,6 +21,5 @@ class Schedule(db.Model):
     course_info = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
 
     def __repr__(self):
-        return '<Schedule for Course ID {}>'.format(self.course_info)
-
+        return '<Schedule for Course ID %d (Weekday %d %s to %s)>' % (self.course_info, self.weekday, self.start_time, self.end_time)
 
