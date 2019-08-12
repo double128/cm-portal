@@ -4,8 +4,10 @@ from werkzeug import secure_filename
 from werkzeug.urls import url_parse
 from app import app, celery
 from app.forms import LoginForm, UploadForm, QuotaForm, CreateNetworkForm, EditNetworkForm, AcceptDeleteForm
-from app.models import process_csv
 from . import cache
+from app.models import process_csv
+from app.db_model import Course, Schedule
+from app import db
 from app import keystone_model as keystone
 from app import nova_model as nova
 from app import neutron_model as neutron
@@ -16,6 +18,9 @@ from app import exceptions as exceptions
 from celery.task.control import inspect
 import re
 import pprint
+from datetime import date, time
+import calendar
+#from app import database_model as db
 
 @app.route('/')
 @login_required
@@ -281,7 +286,7 @@ def image_management():
             return redirect(url_for('image_management'))
 
         elif form.download_image.data is True:
-            # Check if only one box is checked
+            # Check if only one box is checked, there is a jquery check for this on the webpage itself but it's good to have a backup plan
             form_dict = form.data
             boolean_list = []
             for key in form_dict:
@@ -308,12 +313,42 @@ def clean_html_tags(html):
 @app.route('/test', methods=['GET', 'POST'])
 @login_required
 def testing():
-    keystone.get_course_users(current_user.course)
+    #u = Course(course=current_user.course, instructor=current_user.id)
+    #db.session.add(u)
+    #db.session.commit()
+    course = Course.query.filter_by(course=current_user.course).first_or_404()
+    
+
+    # 3:40 - 5:00 PM EDT / 7:40 - 9:00 PM UTC / 19:40 - 21:00 UTC
+    #time_range = set_datetime_variables(19, 40, 21, 0) 
+    
+    #t = Schedule(weekday=1, start_time=time_range['start'], end_time=time_range['end'], course_id=current_user.course)
+    #db.session.add(t)
+    #db.session.commit()
+    
+    #times = c.scheduled_time.all()
+    #for t in times:
+    #    print(t)
+
+    sched = Schedule.query.all()
+    for s in sched:
+        print(s.id)
+        print(s.weekday)
+        print(s.start_time)
+        print(s.end_time)
+        print(s.course_id)
+
+    course_sched = course.scheduled_times.all()
+    print(course_sched)
+
     return render_template('testing.html')
 
 
-@app.route('/celery_test')
-@login_required
-def celery_test():
-    worker.example.delay('hello world')
-    return ''
+def set_datetime_variables(start_hour, start_minute, end_hour, end_minute):
+    time_range = {}
+    start_time = time(start_hour, start_minute)
+    end_time = time(end_hour, end_minute)
+    time_range['start'] = start_time
+    time_range['end'] = end_time
+    return time_range
+

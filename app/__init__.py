@@ -12,14 +12,14 @@ from flask_migrate import Migrate
 app = Flask(__name__)
 app.config.from_object(Config)
 session = Session(app)
-
 login = LoginManager(app)
 login.login_view = 'login'
 login.users = {}
 csrf = CSRFProtect(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 db = SQLAlchemy(app)
-migrate = Migrate(db, app)
+migrate = Migrate(app, db)
+#db.init_app(app)
 
 celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'], backend=app.config['CELERY_BACKEND_URL'])
 celery.conf.update(app.config)
@@ -27,4 +27,4 @@ celery.conf.update(app.config)
 with app.app_context():
     cache.clear()
 
-from app import routes, models
+from app import routes, db_model

@@ -177,8 +177,6 @@ def async_network_create(self, project_id, network_name, subnet_name, router_nam
 
 
 def network_delete_wrapper(project, course, network):
-    #all_networks = {project: {**network}, **network['children']}
-    #all_networks[project].pop('children', None)
     all_networks = merge_network_dicts(project, network)
     for network in all_networks:
         async_network_delete.delay(all_networks[network])

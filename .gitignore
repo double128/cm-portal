@@ -12,3 +12,9 @@ app/__pycache__/
 uploads/
 config.py
 flask_session/
+downloads/
+
+# Ignore DB stuff
+database/
+migrations/
+*.db
