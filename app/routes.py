@@ -5,7 +5,7 @@ from werkzeug.urls import url_parse
 from app import app, celery
 from app.forms import LoginForm, UploadForm, QuotaForm, CreateNetworkForm, EditNetworkForm, AcceptDeleteForm
 from . import cache
-from app.models import process_csv
+from app.models import process_csv, convert_utc_to_eastern
 from app.db_model import Course, Schedule
 from app import db
 from app import keystone_model as keystone
@@ -20,7 +20,7 @@ import re
 import pprint
 from datetime import date, time
 import calendar
-#from app import database_model as db
+import json
 
 @app.route('/')
 @login_required
@@ -84,7 +84,9 @@ def upload():
 @login_required
 def course_management():
     from app.forms import create_student_checkbox_list
-    #course_student_list = dict(sorted(keystone.get_course_users(current_user.course).items()))
+    course_schedule = Course.query.filter_by(course=current_user.course).first()
+    course_schedule = course_schedule.scheduled_times.all()
+
     course_student_list = keystone.get_course_users(current_user.course)
     form = create_student_checkbox_list(course_student_list)
     
@@ -110,7 +112,22 @@ def course_management():
             session['to_delete'] = to_delete
             return redirect(url_for('delete_students'))
 
-    return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form)
+    return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form, course_schedule=course_schedule)
+
+@app.route('/manage/schedule', methods=['GET', 'POST'])
+@login_required
+def schedule_management():
+    course_schedule = Course.query.filter_by(course=current_user.course).first().scheduled_times.all()
+    full_schedule = Schedule.query.all()
+
+    return render_template('schedule_management.html', course_schedule=course_schedule, full_schedule=full_schedule)
+
+@app.context_processor
+def course_management_utils():
+    def convert_int_to_weekday(weekday):
+        weekday_dict = {0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 4: 'Friday', 5: 'Saturday', 6: 'Sunday'}
+        return weekday_dict[weekday]
+    return dict(convert_int_to_weekday=convert_int_to_weekday, convert_utc_to_eastern=convert_utc_to_eastern)
 
 
 @app.route('/manage/delete', methods=['GET', 'POST'])
@@ -318,39 +335,10 @@ def clean_html_tags(html):
 @app.route('/test', methods=['GET', 'POST'])
 @login_required
 def testing():
-    #c = Course.query.filter_by(course=current_user.course).first()
-    #if not c:
-    #    print("No course found, creating one")
-    #new_course = Course(course=current_user.course, instructor=current_user.id)
-    #db.session.add(new_course)
-    #db.session.commit()
-    
-    #db_course_id = Course.query.filter_by(course=current_user.course).first().id
+    data = Course.query.all()
+    jsond = jsonify({'data': [d.serialize for d in data]})
 
-    # 3:40 - 5:00 PM EDT / 7:40 - 9:00 PM UTC / 19:40 - 21:00 UTC
-    #time_range = set_datetime_variables(19, 40, 21, 0) 
-    #time_range = set_datetime_variables(15, 10, 18, 0) 
-    
-    #t = Schedule.query.all()
-    #if not t:
-    #    print("No schedule entry found, creating one")
-    #    new_time = Schedule(weekday=1, start_time=time_range['start'], end_time=time_range['end'], course_info=db_course_id)
-    #    db.session.add(new_time)
-    #    db.session.commit()
-    
-    #db_course_id = Course.query.filter_by(course=current_user.course).first().id
-    #time_range = set_datetime_variables(15, 10, 18, 0)
-    #new_time = Schedule(weekday=0, start_time=time_range['start'], end_time=time_range['end'], course_info=db_course_id)
-    #db.session.add(new_time)
-    #db.session.commit()
-
-    #times = db_course.scheduled_times.all()
-    #for t in times:
-    #    print(t.start_time)
-    #    print(t.end_time)
-    #    print(t.weekday)
-    
-    return render_template('testing.html')
+    return render_template('testing.html', jsond=jsond)
 
 
 def set_datetime_variables(start_hour, start_minute, end_hour, end_minute):

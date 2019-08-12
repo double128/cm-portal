@@ -48,6 +48,13 @@ input.disable-buttons {
 
 {% block content %}
 <h1>Course Management: {{ course }}</h1>
+<h3>Course Schedule</h3> 
+{% for time in course_schedule %}
+{# TODO: Sort by weekday (ergo Monday first in list, Friday last in list) #}
+<p>{{ convert_int_to_weekday(time.weekday) }}s @ {{ convert_utc_to_eastern(time.start_time) }}-{{ convert_utc_to_eastern(time.end_time) }}</p>
+{% endfor %}
+
+<h3>Course Students</h3>
 <form action="" method="post" id="form">
 	{{ form.hidden_tag() }}
 	<table class="left-align">
@@ -81,4 +88,6 @@ input.disable-buttons {
 <hr>
 <a href={{ url_for('edit_quota') }}>Edit Project Quota</a>
 <a href={{ url_for('image_management') }}>Image Management</a>
+<a href={{ url_for('schedule_management') }}>Course Schedule Management</a>
+<a href="">Verify Course Networks</a>
 {% endblock %}

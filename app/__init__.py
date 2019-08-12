@@ -18,6 +18,7 @@ login.users = {}
 csrf = CSRFProtect(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 db = SQLAlchemy(app)
+
 migrate = Migrate(app, db)
 #db.init_app(app)
 

@@ -30,4 +30,6 @@ def convert_utc_to_eastern(utc):
     return pytz.utc.localize(utc, is_dst=None).astimezone(pytz.timezone('America/Toronto')).strftime('%l:%M %p').lstrip()
     
 
-
+def convert_int_to_weekday(weekday):
+    weekday_dict = {'0': 'Monday', '1': 'Tuesday', '2': 'Wendesday', '3': 'Thursday', '4': 'Friday', '5': 'Saturday', '6': 'Sunday'}
+    return weekday_dict[weekday]

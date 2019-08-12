@@ -8,8 +8,21 @@ class Course(db.Model):
     instructor = db.Column('instructor', db.String(120), index=True, nullable=False)
     scheduled_times = db.relationship('Schedule', lazy='dynamic', backref=db.backref('course_code', lazy='joined'))
 
+    def __init__(self):
+        self.id = id
+        self.course = course
+        self.instructor = instructor
+        self.scheduled_times = scheduled_times
+    
     def __repr__(self):
         return '<Course %s with Course ID %d>' % (self.course, self.id)
+    
+    @property
+    def serialize(self):
+        return {'id': self.id,
+                'course': self.course,
+                'instructor': self.instructor,
+                'scheduled_times': self.course_code}
 
 
 class Schedule(db.Model):
