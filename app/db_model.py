@@ -3,23 +3,26 @@ from app import db
 class Course(db.Model):
     __tablename__ = 'course'
     id = db.Column('id', db.Integer, primary_key=True)
-    course = db.Column('course', db.String(10), index=True, unique=True)
-    instructor = db.Column('instructor', db.String(120), index=True)
-    scheduled_times = db.relationship('schedule', backref='course_code', lazy='dynamic')
+    course = db.Column('course', db.String(10), index=True, unique=True, nullable=False)
+    instructor = db.Column('instructor', db.String(120), index=True, nullable=False)
+    scheduled_times = db.relationship('Schedule', lazy='dynamic', backref=db.backref('course_code', lazy='joined'))
 
     def __repr__(self):
-        return '<Course {}>'.format(self.course)
+        return '<Course %s with Course ID %d>' % (self.course, self.id)
+
+    #def get_scheduled_times(self):
+    #
 
 
 class Schedule(db.Model):
-    __tablename__= "schedule"
+    __tablename__= 'schedule'
     id = db.Column('id', db.Integer, primary_key=True)
-    weekday = db.Column('weekday', db.Integer, index=True)
-    start_time = db.Column('start_time', db.Time, index=True)
-    end_time = db.Column('end_time', db.Time, index=True)
-    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
+    weekday = db.Column('weekday', db.Integer, index=True, nullable=False)
+    start_time = db.Column('start_time', db.Time, index=True, nullable=False)
+    end_time = db.Column('end_time', db.Time, index=True, nullable=False)
+    course_info = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
 
     def __repr__(self):
-        return '<Schedule {}>'.format(self.course_id)
+        return '<Schedule for Course ID {}>'.format(self.course_info)
 
 
