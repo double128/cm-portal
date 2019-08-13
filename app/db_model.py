@@ -11,7 +11,7 @@ class Course(db.Model):
 
 class Schedule(db.Model):
     __tablename__= 'schedule'
-
+    
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     weekday = db.Column('weekday', db.Integer, index=True, nullable=False)
     start_time = db.Column('start_time', db.Time, index=True, nullable=False)

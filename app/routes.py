@@ -18,7 +18,9 @@ from app import exceptions as exceptions
 from celery.task.control import inspect
 import re
 import pprint
-from datetime import date, time
+from datetime import date, time, timedelta, datetime
+import pytz
+import calendar
 import json
 
 @app.route('/')
@@ -84,8 +86,8 @@ def upload():
 @login_required
 def course_management():
     from app.forms import create_student_checkbox_list
-    course_schedule = Course.query.filter_by(course=current_user.course).first()
-    course_schedule = course_schedule.scheduled_times.all()
+    #course_schedule = Course.query.filter_by(course=current_user.course).first()
+    #course_schedule = course_schedule.scheduled_times.all()
 
     course_student_list = keystone.get_course_users(current_user.course)
     form = create_student_checkbox_list(course_student_list)
@@ -112,23 +114,23 @@ def course_management():
             session['to_delete'] = to_delete
             return redirect(url_for('delete_students'))
 
-    return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form, course_schedule=course_schedule)
+    #return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form, course_schedule=course_schedule)
+    return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form)
 
 
 @app.route('/manage/schedule', methods=['GET', 'POST'])
 @login_required
 def schedule_management():
-    course_schedule = Course.query.filter_by(course=current_user.course).first().scheduled_times.all()
-    full_schedule = Schedule.query.all()
+    #course_schedule = Course.query.filter_by(course=current_user.course).first().scheduled_times.all()
+    #full_schedule = Schedule.query.all()
 
-    return render_template('schedule_management.html', course_schedule=course_schedule, full_schedule=full_schedule)
+    #return render_template('schedule_management.html', course_schedule=course_schedule, full_schedule=full_schedule)
+    foo="bar"
+    return render_template('schedule_management.html', foo=foo)
 
 
 @app.context_processor
 def course_management_utils():
-    def convert_int_to_weekday(weekday):
-        weekday_dict = {0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 4: 'Friday', 5: 'Saturday', 6: 'Sunday'}
-        return weekday_dict[weekday]
     return dict(convert_int_to_weekday=convert_int_to_weekday, convert_utc_to_eastern=convert_utc_to_eastern)
 
 
@@ -344,9 +346,9 @@ def testing():
     #db.session.commit()
     #db_course_id = Course.query.filter_by(course=current_user.course).first().id
     
-    #time_range = set_datetime_variables(14, 0, 18, 0)
+    #time_range = set_datetime_variables(13, 0, 18, 0)
     #time_range = set_datetime_variables(1, 0, 3, 0)
-    #t = Schedule(weekday=3, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
+    #t = Schedule(weekday=1, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
     #db.session.add(t)
     #db.session.commit()
     # NOTE: DON'T DELETE THIS
@@ -377,26 +379,43 @@ def set_datetime_variables(start_hour, start_minute, end_hour, end_minute):
     time_range['end'] = end_time
     return time_range
 
+
+#@app.route('/api/schedule', methods=['GET'])
 @app.route('/api/schedule', methods=['GET'])
 @login_required
 def get_schedule():
-    #schedule = Schedule.query.all()
-    #schedule_schema = ScheduleSchema()
-    #result = schedule_schema.dump(schedule)
+    # If we get a request from fullcalendar with a date, then set the end date to today
+    if request.args.get('start') and request.args.get('end'):
+        today = datetime.strptime(request.args.get('end'), '%Y-%m-%d')
+    else:
+        today = date.today()
+
+    courses = Course.query.all()
+    result = CourseSchema(many=True).dump(courses).data
+    tz = pytz.timezone('America/Toronto')   
     
-    #course = Course.query.filter_by(course=current_user.course).first()
-    #course_schema = CourseSchema()
-    #result = course_schema.dump(course).data
-    #print(result)
+    schedule_list = []
+    for r in result:
+        for t in r['course_schedule']:
+            course_dict = {}
+            course_dict['title'] = r['course'] + ' Lab Session'
+            week_dates = get_week_dates(today)
+            for w in week_dates:
+                if w.weekday() == t['weekday']:
+                    start = pytz.utc.localize(datetime.combine(w, datetime.strptime(t['start_time'], '%H:%M:%S').time()), is_dst=None).astimezone(tz)
+                    end = pytz.utc.localize(datetime.combine(w, datetime.strptime(t['end_time'], '%H:%M:%S').time()), is_dst=None).astimezone(tz)
+                    course_dict['start'] = start.isoformat()
+                    course_dict['end'] = end.isoformat()
+            schedule_list.append(course_dict)
+    return jsonify(schedule_list)
 
-    #test = Course.query.get(2)
-    #print(test.__table__.columns.keys())
-    #print(test.__dict__)
 
-    #test2 = Schedule.query.filter_by(weekday=3).first()
-    #print(test2.course_id)
+def convert_int_to_weekday(weekday):
+    weekday_dict = {0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 4: 'Friday', 5: 'Saturday', 6: 'Sunday'}
+    return weekday_dict[weekday]
 
-    schedule = Schedule.query.all()
-    result = ScheduleSchema(many=True).dump(schedule).data
-    return jsonify(result)
+def get_week_dates(today):
+    weekday = today.weekday()
+    start = today - timedelta(days=weekday)
+    return [start + timedelta(days=d) for d in range(7)]
 

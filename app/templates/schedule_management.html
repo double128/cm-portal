@@ -12,33 +12,39 @@
 	$(document).ready(function() {
 		$('#calendar').fullCalendar({
 			header: {
-				left: 'prev,next today',
+				left: '',
 				center: 'title',
-				right: 'month,agendaWeek,agendaDay'
+				right: 'prev, next, today',
 			},
-			defaultDate: '2019-10-12',
-			editable: true,
-			eventLimit: true, // allow "more" link when too many events
-			events: {
-				url: 'data',
-				error: function() {
-					$('#script-warning').show();
-				}
-			},
+			defaultView: 'agendaWeek',
+			defaultDate: moment().format('YYYY-MM-DD'),
+			allDaySlot: false,
+			events: '/api/schedule',
 			loading: function(bool) {
 				$('#loading').toggle(bool);
 			}
+		});
+		console.log(moment().format('YYYY-MM-DD'))
+		$('body').on('click', 'button.fc-prev-button', function() {
+			console.log('prev clicked')
+			$('#calendar').fullCalendar('prev'); // call method
+		});
+
+		$('body').on('click', 'button.fc-next-button', function() {
+			console.log('next clicked')
+			$('#calendar').fullCalendar('next'); // call method
 		});
 	});
 	</script>
 	
 	<style>
-	body {
+{#	body {
 		margin: 0;
 		padding: 0;
 		font-family: "Lucida Grande",Helvetica,Arial,Verdana,sans-serif;
 		font-size: 14px;
 	}
+#}
 	#script-warning {
 		display: none;
 		background: #eee;
