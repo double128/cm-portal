@@ -123,10 +123,8 @@ def course_management():
 def schedule_management():
     #course_schedule = Course.query.filter_by(course=current_user.course).first().scheduled_times.all()
     #full_schedule = Schedule.query.all()
-
     #return render_template('schedule_management.html', course_schedule=course_schedule, full_schedule=full_schedule)
-    foo="bar"
-    return render_template('schedule_management.html', foo=foo)
+    return render_template('schedule_management.html')
 
 
 @app.context_processor
@@ -347,8 +345,8 @@ def testing():
     #db_course_id = Course.query.filter_by(course=current_user.course).first().id
     
     #time_range = set_datetime_variables(13, 0, 18, 0)
-    #time_range = set_datetime_variables(1, 0, 3, 0)
-    #t = Schedule(weekday=1, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
+    #time_range = set_datetime_variables(5, 0, 7, 0)
+    #t = Schedule(weekday=3, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
     #db.session.add(t)
     #db.session.commit()
     # NOTE: DON'T DELETE THIS
@@ -399,6 +397,7 @@ def get_schedule():
         for t in r['course_schedule']:
             course_dict = {}
             course_dict['title'] = r['course'] + ' Lab Session'
+            course_dict['instructor'] = r['instructor']
             week_dates = get_week_dates(today)
             for w in week_dates:
                 if w.weekday() == t['weekday']:
@@ -406,6 +405,15 @@ def get_schedule():
                     end = pytz.utc.localize(datetime.combine(w, datetime.strptime(t['end_time'], '%H:%M:%S').time()), is_dst=None).astimezone(tz)
                     course_dict['start'] = start.isoformat()
                     course_dict['end'] = end.isoformat()
+                    
+                    if course_dict['instructor'] == current_user.id:
+                        course_dict['editable'] = True # Current user owns this event so let them edit it
+                    else:
+                        course_dict['editable'] = False
+                        #course_dict['backgroundColor'] = "#eee"
+                        #course_dict['borderColor'] = "#ddd"
+                        course_dict['eventColor'] = '#ddd'
+
             schedule_list.append(course_dict)
     return jsonify(schedule_list)
 

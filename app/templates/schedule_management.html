@@ -12,27 +12,18 @@
 	$(document).ready(function() {
 		$('#calendar').fullCalendar({
 			header: {
-				left: '',
-				center: 'title',
+				left: 'title',
+				center: '',
 				right: 'prev, next, today',
 			},
 			defaultView: 'agendaWeek',
 			defaultDate: moment().format('YYYY-MM-DD'),
 			allDaySlot: false,
-			events: '/api/schedule',
+			eventSources: [{url: '/api/schedule'}],
+			slotEventOverlap: false,
 			loading: function(bool) {
 				$('#loading').toggle(bool);
 			}
-		});
-		console.log(moment().format('YYYY-MM-DD'))
-		$('body').on('click', 'button.fc-prev-button', function() {
-			console.log('prev clicked')
-			$('#calendar').fullCalendar('prev'); // call method
-		});
-
-		$('body').on('click', 'button.fc-next-button', function() {
-			console.log('next clicked')
-			$('#calendar').fullCalendar('next'); // call method
 		});
 	});
 	</script>
@@ -63,7 +54,7 @@
 		right: 10px;
 	}
 	#calendar {
-		max-width: 900px;
+		max-width:900px;
 		margin: 40px auto;
 		padding: 0 10px;
 	}
@@ -72,11 +63,6 @@
 
 {% block content %}
 <h1>Course Schedule</h1>
-{% for time in course_schedule %}
-{# TODO: Sort by weekday (ergo Monday first in list, Friday last in list) #}
-<p>{{ convert_int_to_weekday(time.weekday) }}s @ {{ convert_utc_to_eastern(time.start_time) }}-{{ convert_utc_to_eastern(time.end_time) }}</p>
-{% endfor %}
-
 <div id='script-warning'>
 	Error getting data from <code>/data</code> endpoint.
 </div>
