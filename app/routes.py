@@ -6,7 +6,7 @@ from app import app, celery
 from app.forms import LoginForm, UploadForm, QuotaForm, CreateNetworkForm, EditNetworkForm, AcceptDeleteForm
 from . import cache
 from app.models import process_csv, convert_utc_to_eastern
-from app.db_model import Course, Schedule
+from app.db_model import Course, Schedule, CourseSchema, ScheduleSchema
 from app import db
 from app import keystone_model as keystone
 from app import nova_model as nova
@@ -19,7 +19,6 @@ from celery.task.control import inspect
 import re
 import pprint
 from datetime import date, time
-import calendar
 import json
 
 @app.route('/')
@@ -46,8 +45,9 @@ def login():
             flash('Login failed.')
             return redirect(url_for('login'))
         except exceptions.ClassInSession as e:
-            flash(e.message)
-            return redirect(url_for('login'))
+            #flash(e.message)
+            #return redirect(url_for('login'))
+            pass
 
         login_user(osession)
         next_page = request.args.get('next')
@@ -114,6 +114,7 @@ def course_management():
 
     return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form, course_schedule=course_schedule)
 
+
 @app.route('/manage/schedule', methods=['GET', 'POST'])
 @login_required
 def schedule_management():
@@ -121,6 +122,7 @@ def schedule_management():
     full_schedule = Schedule.query.all()
 
     return render_template('schedule_management.html', course_schedule=course_schedule, full_schedule=full_schedule)
+
 
 @app.context_processor
 def course_management_utils():
@@ -335,10 +337,36 @@ def clean_html_tags(html):
 @app.route('/test', methods=['GET', 'POST'])
 @login_required
 def testing():
-    data = Course.query.all()
-    jsond = jsonify({'data': [d.serialize for d in data]})
+    # NOTE: DON'T DELETE THIS
+    #if not Course.query.filter_by(course=current_user.course).first():
+    #c = Course(course=current_user.course, instructor=current_user.id)
+    #db.session.add(c)
+    #db.session.commit()
+    #db_course_id = Course.query.filter_by(course=current_user.course).first().id
+    
+    #time_range = set_datetime_variables(14, 0, 18, 0)
+    #time_range = set_datetime_variables(1, 0, 3, 0)
+    #t = Schedule(weekday=3, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
+    #db.session.add(t)
+    #db.session.commit()
+    # NOTE: DON'T DELETE THIS
 
-    return render_template('testing.html', jsond=jsond)
+#    course_schema = CourseSchema()
+#    schedule_schema = ScheduleSchema()
+#
+#    course_data = Course.query.filter_by(course=current_user.course).first()
+#    course_db_id = Course.query.filter_by(course=current_user.course).first().id
+#
+#    print(course_schema.dump(course_data))
+    #print(course_schema.dump(Course.query.filter_by(course=current_user.course).first()))
+    #print(schedule_schema.dump(Schedule.query.filter_by(course_id=course_db_id)))
+
+   # schedule = Schedule(course_id=current_user.course)
+
+   # print(course_schema.dump(course_s).data)
+   # print(schedule_schema.dump(schedule).data)
+
+    return render_template('testing.html')
 
 
 def set_datetime_variables(start_hour, start_minute, end_hour, end_minute):
@@ -348,4 +376,27 @@ def set_datetime_variables(start_hour, start_minute, end_hour, end_minute):
     time_range['start'] = start_time
     time_range['end'] = end_time
     return time_range
+
+@app.route('/api/schedule', methods=['GET'])
+@login_required
+def get_schedule():
+    #schedule = Schedule.query.all()
+    #schedule_schema = ScheduleSchema()
+    #result = schedule_schema.dump(schedule)
+    
+    #course = Course.query.filter_by(course=current_user.course).first()
+    #course_schema = CourseSchema()
+    #result = course_schema.dump(course).data
+    #print(result)
+
+    #test = Course.query.get(2)
+    #print(test.__table__.columns.keys())
+    #print(test.__dict__)
+
+    #test2 = Schedule.query.filter_by(weekday=3).first()
+    #print(test2.course_id)
+
+    schedule = Schedule.query.all()
+    result = ScheduleSchema(many=True).dump(schedule).data
+    return jsonify(result)
 

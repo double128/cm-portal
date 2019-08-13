@@ -1,38 +1,32 @@
-from app import db
+from app import db, ma
 import datetime
 
 class Course(db.Model):
     __tablename__ = 'course'
-    id = db.Column('id', db.Integer, primary_key=True)
+    
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     course = db.Column('course', db.String(10), index=True, unique=True, nullable=False)
     instructor = db.Column('instructor', db.String(120), index=True, nullable=False)
-    scheduled_times = db.relationship('Schedule', lazy='dynamic', backref=db.backref('course_code', lazy='joined'))
-
-    def __init__(self):
-        self.id = id
-        self.course = course
-        self.instructor = instructor
-        self.scheduled_times = scheduled_times
-    
-    def __repr__(self):
-        return '<Course %s with Course ID %d>' % (self.course, self.id)
-    
-    @property
-    def serialize(self):
-        return {'id': self.id,
-                'course': self.course,
-                'instructor': self.instructor,
-                'scheduled_times': self.course_code}
-
+    course_schedule = db.relationship('Schedule', backref='course_code', lazy='dynamic')
 
 class Schedule(db.Model):
     __tablename__= 'schedule'
-    id = db.Column('id', db.Integer, primary_key=True)
+
+    id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     weekday = db.Column('weekday', db.Integer, index=True, nullable=False)
     start_time = db.Column('start_time', db.Time, index=True, nullable=False)
     end_time = db.Column('end_time', db.Time, index=True, nullable=False)
-    course_info = db.Column(db.Integer, db.ForeignKey('course.id'), nullable=False)
+    course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
 
-    def __repr__(self):
-        return '<Schedule for Course ID %d (Weekday %d %s to %s)>' % (self.course_info, self.weekday, self.start_time, self.end_time)
 
+### MARSHMALLOW SCHEMAS ##############################
+
+class ScheduleSchema(ma.ModelSchema):
+    class Meta:
+        model = Schedule
+        fields = ('id', 'weekday', 'start_time', 'end_time', 'course_id')
+
+class CourseSchema(ma.ModelSchema):
+    course_schedule = ma.Nested(ScheduleSchema, many=True)
+    class Meta:
+        model = Course
