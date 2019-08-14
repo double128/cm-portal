@@ -1,24 +1,33 @@
 {% extends "base.html" %}
 
 {% block scripts %}
-	{{ super() }}
-	<script type='text/javascript' src='{{ url_for('static', filename='course_management/course_management.js') }}'></script>
+{{ super() }}
+<script type='text/javascript' src='{{ url_for('static', filename='course_management/course_management.js') }}'></script>
 {% endblock %}
 
 {% block styles %}
-	{{ super() }}
-	<link rel='stylesheet' type='text/css' href='{{ url_for('static', filename='course_management/course_management.css') }}'/>
+{{ super() }}
+<link rel='stylesheet' type='text/css' href='{{ url_for('static', filename='course_management/course_management.css') }}'/>
 {% endblock %}
 
-
 {% block app_content %}
-<h1>Course Management: {{ course }}</h1>
+{# <div class='page-header' id='banner'>
+	<div class='row'>
+		<div class='col-sm-6'>
+			<h1>Course Management: {{ course }}</h1>
+		</div>
+	</div>
+</div> #}
+<div class='page-header pb-3'>
+	<h1>Course Management: {{ course }}</h1>
+</div>
+
 <form action="" method="post" id="form">
 	{{ form.hidden_tag() }}
 	<table class='table'>
-		<thead class='grey lighten-2'>
+		<thead class='thead-light'>
    			<tr>
-				<th scope='col'><span class="glyphicon glyphicon-ok"></span></th>
+				<th scope='col'><i class='fa fa-check'></i></th>
         			<th scope='col'>Username</th>
         			<th scope='col'>Project Name</th>
     			</tr>

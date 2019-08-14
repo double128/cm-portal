@@ -3,9 +3,10 @@ from wtforms import StringField, PasswordField, IntegerField, SubmitField, FileF
 from wtforms.validators import DataRequired, NumberRange, Length, IPAddress, InputRequired, ValidationError, StopValidation, Regexp
 
 class LoginForm(FlaskForm):
-    username = StringField('Username', default='test', validators=[DataRequired()])
-    password = PasswordField('Password', default='cisco123', validators=[DataRequired()])
-    course = IntegerField('Course', default=1111, validators=[DataRequired()])
+    username = StringField('Username', default='test', render_kw={'placeholder': 'Username'}, validators=[DataRequired()])
+    password = PasswordField('Password', render_kw={'placeholder': 'Password'}, validators=[DataRequired()])
+    #course = IntegerField('Course', default=1111, render_kw={'placeholder': 'Course ID (ex. 1111)'}, validators=[DataRequired()])
+    course = IntegerField('Course', default=1111, render_kw={'placeholder': 'Course ID (ex. 1111)'}, validators=[DataRequired()])
     remember_me = BooleanField('Remember Me')
     submit = SubmitField('Sign In')
 
