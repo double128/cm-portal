@@ -1,83 +1,37 @@
 {% extends "base.html" %}
 
-{% block head %}
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
-
-<script type="text/javascript">
-$(document).ready(function() { 
-        {# Disable submit buttons until a checkbox is selected #}
-	$("input[type='submit']").addClass("disable-buttons")
-	$("input[type='checkbox']").change(function() {
-		var student_checkbox = $("input[name*='student_']").filter(":checked").length;
-		var ta_checkbox = $("input[name*='ta_']").filter(":checked").length
-
-		if ((student_checkbox == 0) && (ta_checkbox == 0)) {
-			$("input[type='submit']").addClass("disable-buttons");
-		} else if ((student_checkbox >= 1) && (ta_checkbox == 0)) {
-			$("input[type='submit']").removeClass("disable-buttons");
-		} else if ((student_checkbox >= 1) && (ta_checkbox >= 1)) {
-			$("input[name*='designate_as_ta']").addClass("disable-buttons");
-		} else if ((student_checkbox == 0) && (ta_checkbox >= 1)) {
-			$("input[name*='reset_password']").removeClass("disable-buttons");
-			$("input[name*='delete_student']").removeClass("disable-buttons");
-		}
-	});
-});
-
-function submitButton(clickedButton) {
-	$('.submit-button').addClass('stop-interaction');
-	$(clickedButton).val("Please wait...").addClass('visual-changes');
-};
-</script>
-
-<style>
-input.stop-interaction {
-	pointer-events:none;
-}
-
-input.visual-changes {
-	color: #999 !important;
-}
-
-input.disable-buttons {
-        pointer-events:none;
-        color: #999;
-}
-</style>
+{% block scripts %}
+	{{ super() }}
+	<script type='text/javascript' src='{{ url_for('static', filename='course_management/course_management.js') }}'></script>
 {% endblock %}
 
-{% block content %}
-<h1>Course Management: {{ course }}</h1>
-<h3>Course Schedule</h3> 
-{% for time in course_schedule %}
-{# TODO: Sort by weekday (ergo Monday first in list, Friday last in list) #}
-<p>{{ convert_int_to_weekday(time.weekday) }}s @ {{ convert_utc_to_eastern(time.start_time) }}-{{ convert_utc_to_eastern(time.end_time) }}</p>
-{% endfor %}
+{% block styles %}
+	{{ super() }}
+	<link rel='stylesheet' type='text/css' href='{{ url_for('static', filename='course_management/course_management.css') }}'/>
+{% endblock %}
 
-<h3>Course Students</h3>
+
+{% block app_content %}
+<h1>Course Management: {{ course }}</h1>
 <form action="" method="post" id="form">
 	{{ form.hidden_tag() }}
-	<table class="left-align">
-   		<tr>
-			<th></th>
-        		<th>Username</th>
-        		<th>Project Name</th>
-    		</tr>
-    		{% for data in form if data.type == "BooleanField" and 'nstructors' not in data.description %}
-    		<tr>
-		    <td>{{ data }}</th>
-	    	    <th>{{ data.label }}</th>
-	    	    <td>{{ data.description }}</td>
-    		</tr>
-    		{% endfor %}
-		<tr><th><br></th></tr>
-		{% for data in form if data.type == "BooleanField" and 'nstructors' in data.description %}
-		<tr>
-		    <td>{{ data }}</th>
-	    	    <th>{{ data.label }}</th>
-	    	    <td>{{ data.description }}</td>
-    		</tr>
-    		{% endfor %}
+	<table class='table'>
+		<thead class='grey lighten-2'>
+   			<tr>
+				<th scope='col'><span class="glyphicon glyphicon-ok"></span></th>
+        			<th scope='col'>Username</th>
+        			<th scope='col'>Project Name</th>
+    			</tr>
+		</thead>
+		<tbody>
+			{% for data in form if data.type == "BooleanField" %}
+    			<tr>
+				<th scope='row'>{{ data }}</th>
+				<td>{% if 'nstructors' in data.description %}{{ data.label }} (TA){% else %}{{ data.label }}{% endif %}</td>
+   		    		<td>{{ data.description }}</td>
+    			</tr>
+    			{% endfor %}
+		</tbody>
 	</table>
 	<p>
 	<input class="submit-button" id="reset_password" name="reset_password" type="submit" value="Reset Password" onclick="submitButton(this)">

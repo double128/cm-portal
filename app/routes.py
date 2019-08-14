@@ -48,9 +48,8 @@ def login():
             flash('Login failed.')
             return redirect(url_for('login'))
         except exceptions.ClassInSession as e:
-            #flash(e.message)
-            #return redirect(url_for('login'))
-            pass
+            flash(e.message)
+            return redirect(url_for('login'))
 
         login_user(osession)
         next_page = request.args.get('next')
@@ -80,7 +79,7 @@ def upload():
         flash('Course list upload in progress')
         return redirect(url_for('index'))
 
-    return render_template('upload.html', form=form)
+    return render_template('upload.html', title='Upload', form=form)
 
 
 @app.route('/manage', methods=['GET', 'POST'])
@@ -116,7 +115,7 @@ def course_management():
             return redirect(url_for('delete_students'))
 
     #return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form, course_schedule=course_schedule)
-    return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form)
+    return render_template('course_management.html', title='Course Management', course_student_list=course_student_list, course=current_user.course, form=form)
 
 
 @app.route('/manage/schedule', methods=['GET', 'POST'])
@@ -125,7 +124,7 @@ def schedule_management():
     #course_schedule = Course.query.filter_by(course=current_user.course).first().scheduled_times.all()
     #full_schedule = Schedule.query.all()
     #return render_template('schedule_management.html', course_schedule=course_schedule, full_schedule=full_schedule)
-    return render_template('schedule_management.html')
+    return render_template('schedule_management.html', title='Schedule Management')
 
 
 @app.context_processor
@@ -150,7 +149,7 @@ def delete_students():
             session.pop('to_delete')
             return redirect(url_for('course_management'))
 
-    return render_template('delete_students.html', form=form, to_delete=to_delete)
+    return render_template('delete_students.html', title='Delete Students', form=form, to_delete=to_delete)
 
 
 @app.route('/manage/edit_quota', methods=['GET', 'POST'])
@@ -180,14 +179,14 @@ def edit_quota():
     form.routers_quota.default = student_quota['router']
     form.process()
 
-    return render_template('edit_quota.html', form=form)
+    return render_template('edit_quota.html', title='Edit Quota', form=form)
 
 
 @app.route('/networks', methods=['GET', 'POST'])
 @login_required
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.course)
-    return render_template('network.html', networks_list=networks_list)
+    return render_template('network.html', title='Networks', networks_list=networks_list)
 
 
 @app.route('/networks/create', methods=['GET', 'POST'])
@@ -212,7 +211,7 @@ def create_networks():
     form.network_address.default = '192.168.0.0'
     form.process()
 
-    return render_template('create_network.html', form=form)
+    return render_template('create_network.html', title='Create Networks', form=form)
 
 
 @app.route('/networks/<network_name>_<network_id>', methods=['GET', 'POST'])
@@ -222,7 +221,7 @@ def view_network(network_id, network_name):
     this_network = networks_list[network_name]
     session['this_network'] = this_network
 
-    return render_template('view_network.html', this_network=this_network, network_id=network_id, network_name=network_name)
+    return render_template('view_network.html', title=network_name, this_network=this_network, network_id=network_id, network_name=network_name)
 
 
 @app.route('/networks/<network_name>_<network_id>/edit', methods=['GET', 'POST'])
@@ -258,7 +257,7 @@ def modify_network(network_id, network_name):
                 neutron.toggle_network_internet_access(current_user.project, current_user.course, this_network, network_name, form.internet_access_toggle.data)
 
             flash("Network configurations have been successfully updated")
-            return redirect(url_for('view_network', network_name=network_name, network_id=network_id))
+            return redirect(url_for('view_network', title=network_name, network_name=network_name, network_id=network_id))
 
     if request.method == 'GET':
         form.dhcp_toggle.default = prev_dhcp_toggle
@@ -266,7 +265,7 @@ def modify_network(network_id, network_name):
         form.internet_access_toggle.default = prev_internet_access_toggle
         form.process()
 
-    return render_template('modify_network.html', form=form, network_id=network_id, network_name=network_name, this_network=this_network)
+    return render_template('modify_network.html', title='Edit ' + network_name, form=form, network_id=network_id, network_name=network_name, this_network=this_network)
 
 
 @app.route('/networks/<network_name>_<network_id>/delete', methods=['GET', 'POST'])
@@ -289,9 +288,9 @@ def delete_network(network_id, network_name):
             return redirect(url_for('network_panel'))
     
         elif form.cancel.data:
-            return redirect(url_for('view_network', network_id=network_id, network_name=network_name))
+            return redirect(url_for('view_network', title=network_name, network_id=network_id, network_name=network_name))
 
-    return render_template('delete_network.html', form=form, network_id=network_id, network_name=network_name)
+    return render_template('delete_network.html', title='Delete ' + network_name, form=form, network_id=network_id, network_name=network_name)
 
 
 @app.route('/manage/images', methods=['GET', 'POST'])
@@ -328,7 +327,7 @@ def image_management():
                         glance.download_image(current_user.id, current_user.course, clean_html_tags(str(submitted.label)))
                         flash("A download link will be sent to your email (%s) shortly" % keystone.get_instructor_email(current_user.id))
                         return redirect(url_for('image_management'))
-    return render_template('image_management.html', image_list=image_list, form=form)
+    return render_template('image_management.html', title='Image Management', image_list=image_list, form=form)
 
 def clean_html_tags(html):
     cleanr = re.compile('<.*?>')

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
 
-{% block content %}
-    
+{% block app_content %}
     <h1>Course Overview</h1>
     	{#  <h3>Running Jobs:</h3>
 	{% for job in active_jobs %}
@@ -11,16 +11,21 @@
 	{% for job in scheduled_jobs %}
 	<p>test</p>
 	{% endfor %} #}
+	
+	<div class='row'>
+		<div class='col-md-4'>
+			{% if projects %}
+			<h3>Deployed Projects</h3>
+			<b>Instructor Projects</b>
+			{% for project in projects['instructors']|sort %}
+			<p>{{ project }}</p>
+			{% endfor %}
 
-	{% if projects %}
-	<h3>Deployed Projects</h3>
-	<b>Instructor Projects</b>
-	{% for project in projects['instructors']|sort %}
-		<p>{{ project }}</p>
-	{% endfor %}
-	<b>Student Projects</b>
-	{% for project in projects['students']|sort %}
-		<p>{{ project }}</p>
-	{% endfor %}
-	{% endif %}
+			<b>Student Projects</b>
+			{% for project in projects['students']|sort %}
+			<p>{{ project }}</p>
+			{% endfor %}
+			{% endif %}
+		</div>
+	</div>
 {% endblock %}

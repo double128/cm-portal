@@ -13,17 +13,24 @@
 	<script src="{{ url_for('static', filename='fullcalendar/packages/timegrid/main.js') }}"></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/interaction/main.js') }}"></script>
 	
+	{#<link href='https://use.fontawesome.com/releases/v5.0.6/css/all.css' rel='stylesheet'>#}
+	{#<link href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css' rel='stylesheet' />#}
+	
+	<link href="{{ url_for('static', filename='fullcalendar/packages/bootstrap/main.css') }}" rel='stylesheet'/>
+	<script src="{{ url_for('static', filename='fullcalendar/packages/bootstrap/main.js') }}"></script>
+
 	<script>
 	document.addEventListener('DOMContentLoaded', function() {
 		var calendarEl = document.getElementById('calendar');
 
 		var calendar = new FullCalendar.Calendar(calendarEl, {
- 			plugins: [ 'interaction', 'dayGrid', 'timeGrid' ],
+ 			plugins: [ 'interaction', 'dayGrid', 'timeGrid', 'bootstrap' ],
 			header: {
 				left: 'title',
 				center: '',
 				right: 'prev, next, today',
 			},
+			themeSystem: 'bootstrap',
 			defaultView: 'timeGridWeek',
 			defaultDate: moment().format('YYYY-MM-DD'),
 			allDaySlot: false,
@@ -33,15 +40,21 @@
 					document.getElementById('script-warning').style.display = 'block'
 				}
 			},
-			slotEventOverlap: false,
+			eventOverlap: false,
 			nowIndicator: true,
 			slotDuration: '01:00:00',
+			snapDuration: '00:10:00',
 			height: 'auto',
 			loading: function(bool) {
 				$('#loading').toggle(bool);
 			},
 			dateClick: function(info) {
 				alert('Clicked on: ' + info.dateStr);
+			},
+			eventClick: function(info) {
+				{#alert('Clicked on: ' + info.event.title);#}
+				var modal = document.getElementById('modal');
+				modal.style.display = "block";
 			}
 		});
 
@@ -57,6 +70,9 @@
 		font-size: 14px;
 	}
 #}
+	#modal {
+		display: none;
+	}
 	#script-warning {
 		display: none;
 		background: #eee;
@@ -89,5 +105,11 @@
 </div>
 <div id='loading'>loading...</div>
 <div id='calendar'></div>
+
+<div id='modal' class='modal'>
+	<div class='createModal'>
+		<p>Hi there!</p>
+	</div>
+</div>
 
 {% endblock %}

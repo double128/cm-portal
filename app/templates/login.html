@@ -1,30 +1,18 @@
 {% extends "base.html" %}
+{% import 'bootstrap/wtf.html' as wtf %}
 
-{% block content %}
-    <h1>Sign In</h1>
-    <form action="" method="post">
-        {{ form.hidden_tag() }}
-        <p>
-            {{ form.username.label }}<br>
-            {{ form.username(size=32) }}<br>
-            {% for error in form.username.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            {{ form.password.label }}<br>
-            {{ form.password(size=32) }}<br>
-            {% for error in form.password.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>
-            Course ID (e.g. 4621):<br>
-            {{ form.course(size=4) }}<br>
-            {% for error in form.course.errors %}
-            <span style="color: red;">[{{ error }}]</span>
-            {% endfor %}
-        </p>
-        <p>{{ form.submit() }} &nbsp; {{ form.remember_me() }} {{ form.remember_me.label }}</p>
-    </form>
+{% block app_content %}
+<h1>Sign In</h1>
+<div class='row'>
+	<div class='col-md-4'>
+		<form action='' method='post' role='form'>
+			{{ form.hidden_tag() }}
+			
+			{{ wtf.form_field(form.username) }}
+			{{ wtf.form_field(form.password) }}
+			{{ wtf.form_field(form.course) }}
+			{{ wtf.form_field(form.submit) }}
+		</form>
+	</div>
+</div>
 {% endblock %}

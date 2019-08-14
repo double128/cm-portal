@@ -51,8 +51,7 @@ class OpenStackUser(UserMixin):
     def check_if_course_running(self):
         from app.models import convert_utc_to_eastern
         weekday = datetime.datetime.today().weekday()
-        #current_time = datetime.datetime.utcnow().time()
-        current_time = datetime.time(18, 0, 0)
+        current_time = datetime.datetime.utcnow().time()
 
         try:
             check = Course.query.filter_by(course=self.course).first()
