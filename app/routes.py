@@ -19,6 +19,7 @@ from celery.task.control import inspect
 import re
 import pprint
 from datetime import date, time, timedelta, datetime
+import dateutil.parser
 import pytz
 import calendar
 import json
@@ -384,7 +385,7 @@ def set_datetime_variables(start_hour, start_minute, end_hour, end_minute):
 def get_schedule():
     # If we get a request from fullcalendar with a date, then set the end date to today
     if request.args.get('start') and request.args.get('end'):
-        today = datetime.strptime(request.args.get('end'), '%Y-%m-%d')
+        today = dateutil.parser.parse(request.args.get('end'))
     else:
         today = date.today()
 
@@ -410,9 +411,8 @@ def get_schedule():
                         course_dict['editable'] = True # Current user owns this event so let them edit it
                     else:
                         course_dict['editable'] = False
-                        #course_dict['backgroundColor'] = "#eee"
-                        #course_dict['borderColor'] = "#ddd"
-                        course_dict['eventColor'] = '#ddd'
+                        course_dict['backgroundColor'] = '#ccc'
+                        course_dict['borderColor'] = '#ccc'
 
             schedule_list.append(course_dict)
     return jsonify(schedule_list)

@@ -2,29 +2,50 @@
 
 {% block head %}
 	<meta charset='utf-8' />
-	<link href="{{ url_for('static', filename='fullcalendar.min.css') }}" rel='stylesheet' />
-	<link href="{{ url_for('static', filename='fullcalendar.print.css') }}" rel='stylesheet' media='print' />
-	<script src="{{ url_for('static', filename='lib/moment.min.js') }}"></script>
-	<script src="{{ url_for('static', filename='lib/jquery.min.js') }}"></script>
-	<script src="{{ url_for('static', filename='fullcalendar.min.js') }}"></script>
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js'></script>
 
+	<link href="{{ url_for('static', filename='fullcalendar/packages/core/main.css') }}" rel='stylesheet' />
+	<link href="{{ url_for('static', filename='fullcalendar/packages/daygrid/main.css') }}" rel='stylesheet'/>
+	<link href="{{ url_for('static', filename='fullcalendar/packages/timegrid/main.css') }}" rel='stylesheet'/>
+
+	<script src="{{ url_for('static', filename='fullcalendar/packages/core/main.js') }}"></script>
+	<script src="{{ url_for('static', filename='fullcalendar/packages/daygrid/main.js') }}"></script>
+	<script src="{{ url_for('static', filename='fullcalendar/packages/timegrid/main.js') }}"></script>
+	<script src="{{ url_for('static', filename='fullcalendar/packages/interaction/main.js') }}"></script>
+	
 	<script>
-	$(document).ready(function() {
-		$('#calendar').fullCalendar({
+	document.addEventListener('DOMContentLoaded', function() {
+		var calendarEl = document.getElementById('calendar');
+
+		var calendar = new FullCalendar.Calendar(calendarEl, {
+ 			plugins: [ 'interaction', 'dayGrid', 'timeGrid' ],
 			header: {
 				left: 'title',
 				center: '',
 				right: 'prev, next, today',
 			},
-			defaultView: 'agendaWeek',
+			defaultView: 'timeGridWeek',
 			defaultDate: moment().format('YYYY-MM-DD'),
 			allDaySlot: false,
-			eventSources: [{url: '/api/schedule'}],
+			events: {
+				url: '/api/schedule',
+				failure: function() {
+					document.getElementById('script-warning').style.display = 'block'
+				}
+			},
 			slotEventOverlap: false,
+			nowIndicator: true,
+			slotDuration: '01:00:00',
+			height: 'auto',
 			loading: function(bool) {
 				$('#loading').toggle(bool);
+			},
+			dateClick: function(info) {
+				alert('Clicked on: ' + info.dateStr);
 			}
 		});
+
+		calendar.render();
 	});
 	</script>
 	
@@ -54,7 +75,7 @@
 		right: 10px;
 	}
 	#calendar {
-		max-width:900px;
+		width:80%;
 		margin: 40px auto;
 		padding: 0 10px;
 	}
