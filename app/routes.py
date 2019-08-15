@@ -186,34 +186,52 @@ def edit_quota():
 @login_required
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.course)
+    
     create_form = CreateNetworkForm()
-
-    return render_template('network.html', title='Networks', networks_list=networks_list)
-
-
-@app.route('/networks/create', methods=['GET', 'POST'])
-@login_required
-def create_networks():
-    form = CreateNetworkForm()
-    if form.validate_on_submit():
+    if create_form.validate_on_submit():
         try:
-            neutron.check_network_name(current_user.course, form.network_name.data)
+            neutron.check_network_name(current_user.course, create_form.network_name.data)
         except exceptions.NetworkNameAlreadyExists as e:
-            flash(e)
-            return redirect(url_for('create_networks'))
+            flash(e.message)
+            return redirect(url_for('network_panel'))
         
-        cidr = form.check_cidr()
-        gateway = form.set_gateway(cidr)
+        cidr = create_form.check_cidr()
+        gateway = create_form.set_gateway(cidr)
 
-        neutron.network_create_wrapper(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
+        neutron.network_create_wrapper(current_user.project, current_user.course, create_form.network_name.data, cidr, gateway)
 
         flash('Network creation in progress')
         return redirect(url_for('index'))
 
-    form.network_address.default = '192.168.0.0'
-    form.process()
+    create_form.network_address.default = '192.168.0.0'
+    create_form.process()
 
-    return render_template('create_network.html', title='Create Networks', form=form)
+    return render_template('network.html', title='Networks', networks_list=networks_list, create_form=create_form)
+
+
+#@app.route('/networks/create', methods=['GET', 'POST'])
+#@login_required
+#def create_networks():
+#    form = CreateNetworkForm()
+#    if form.validate_on_submit():
+#        try:
+#            neutron.check_network_name(current_user.course, form.network_name.data)
+#        except exceptions.NetworkNameAlreadyExists as e:
+#            flash(e)
+#            return redirect(url_for('create_networks'))
+#        
+#        cidr = form.check_cidr()
+#        gateway = form.set_gateway(cidr)
+#
+#        neutron.network_create_wrapper(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
+#
+#        flash('Network creation in progress')
+#        return redirect(url_for('index'))
+#
+#    form.network_address.default = '192.168.0.0'
+#    form.process()
+#
+#    return render_template('create_network.html', title='Create Networks', form=form)
 
 
 @app.route('/networks/<network_name>_<network_id>', methods=['GET', 'POST'])

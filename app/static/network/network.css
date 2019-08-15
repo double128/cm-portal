@@ -1,0 +1,4 @@
+input.stop-interaction {
+	pointer-events:none;
+}
+

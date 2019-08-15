@@ -2,127 +2,137 @@
 
 {% block styles %}
 {{ super() }}
-<style>
-.hiddenRow {padding:0 !important;}
-.list-group-hover .list-group-item:hover {
-    background-color: #f5f5f5;
-}
-.active {
-	background-color: #3498DB !important;
-	border-color: #3498DB !important;
-}
-</style>
+	<link rel='stylesheet' type='text/css' href='{{ url_for('static', filename='network/network.css') }}'/>
+
+	<style>
+	.hiddenRow {padding:0 !important;}
+	.list-group-hover .list-group-item:hover {
+	    background-color: #f5f5f5;
+	}
+	.active {
+		background-color: #3498DB !important;
+		border-color: #3498DB !important;
+	}
+	</style>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script>
-$('#accordion-list').on('click', '.list-group-item', function(event) {
-	if($(this).hasClass('active')) {
-		$(this).removeClass('active');
-	} else {
-		$(this).addClass('active').siblings().removeClass('active');
-	}
-});
-
-$('#createNetworkModal').on('show.bs.modal', function(e) {
-	var button = $(e.relatedTarget);
-	var modal = $(this);
-
-	modal.find('.modal-body').load(button.data('remote'));
-});
-</script>
+	<script type='text/javascript' src='{{ url_for('static', filename='network/network.js') }}'></script>
+	<script>
+	$('#accordion-list').on('click', '.list-group-item', function(event) {
+		if($(this).hasClass('active')) {
+			$(this).removeClass('active');
+		} else {
+			$(this).addClass('active').siblings().removeClass('active');
+		}
+	});
+	</script>
 {% endblock %}
 
 {% block app_content %}
 	<div class='row'>
 		<div class='col-md'>
 			<div class='d-flex justify-content-end'>
-				<a href='#createNetworkModal' class='btn btn-secondary mb-3' data-remote='{{ url_for('create_networks') }}' data-toggle='modal' data-target='#createNetworkModal'>Create Network</a>
+				<a href='#createNetworkModal' class='btn btn-secondary mb-3' data-toggle='modal' data-target='#createNetworkModal'>Create Network</a>
 			</div>
 		</div>
 	</div>
 
-  {% if networks_list %}
-		<div id='accordion'>
-			<ul class='panel list-group' id='accordion-list'>
-				{% for network in networks_list|sort %}
-				<li class='list-group-item' data-toggle='collapse' data-target='#{{ network }}' class='accordion-toggle'>{{ network }}</li>
-				
-				<div class='collapse' id='{{ network }}'>
-					<div class='card text-center'>
-						<div class='card-header'>
-							<ul class='nav nav-pills card-header-pills'>
-								<li class='nav-item'>
-									<a class='nav-link' data-target='#{{ network }}-view' data-toggle='table'>Information</a>
-								</li>
-								<li class='nav-item'>
-									<a class='nav-link' data-target='#{{ network }}-options' data-toggle='table'>Configurations</a>
-								</li>
-							</ul>
-						</div>
-					</div class='card-body'>
-
+	{% if networks_list %}
+	<div id='accordion'>
+		<ul class='panel list-group' id='accordion-list'>
+			{% for network in networks_list|sort %}
+			<li class='list-group-item' data-toggle='collapse' data-target='#{{ network }}' class='accordion-toggle'>{{ network }}</li>
+			
+			<div class='collapse' id='{{ network }}'>
+				<div class='card text-center'>
+					<div class='card-header'>
+						<ul class='nav nav-pills card-header-pills'>
+							<li class='nav-item'>
+								<a class='nav-link' data-target='#{{ network }}-view' data-toggle='table'>Information</a>
+							</li>
+							<li class='nav-item'>
+								<a class='nav-link' data-target='#{{ network }}-options' data-toggle='table'>Configurations</a>
+							</li>
+						</ul>
+					</div>
+					<div class='card-body'>
 						<table class='table' id='{{ network }}-view'>
-            <tr>
-              <th>Network Name:</th>
-              <td>{{ networks_list[network]['name'] }}</td>
-            </tr>
-            <tr>
-              <th>Subnet Name:</th>
-              <td>{{ networks_list[network]['subnets']['name'] }}</td>
-            </tr>
-            <tr>
-              <th>Subnet CIDR:</th>
-              <td>{{ networks_list[network]['subnets']['cidr'] }}</td>
-            </tr>
-            <tr>
-              <th>Address Pool:</th>
-              <td>{{ networks_list[network]['subnets']['allocation_pools'][0]['start'] }}-{{ networks_list[network]['subnets']['allocation_pools'][0]['end'] }}</td>
-            </tr>
-            <tr>
-              <th>Router Name:</th>
-              <td>{{ networks_list[network]['router']['name'] }}</td>
-            </tr>
-            <tr>
-              <th>Gateway IP:</th>
-              <td>{{ networks_list[network]['subnets']['gateway_ip'] }}</td>
-            </tr>
-          </table>
+							<tr>
+								<th>Network Name:</th>
+								<td>{{ networks_list[network]['name'] }}</td>
+							</tr>
+							<tr>
+								<th>Subnet Name:</th>
+								<td>{{ networks_list[network]['subnets']['name'] }}</td>
+							</tr>
+							<tr>
+								<th>Subnet CIDR:</th>
+								<td>{{ networks_list[network]['subnets']['cidr'] }}</td>
+							</tr>
+							<tr>
+								<th>Address Pool:</th>
+								<td>{{ networks_list[network]['subnets']['allocation_pools'][0]['start'] }}-{{ networks_list[network]['subnets']['allocation_pools'][0]['end'] }}</td>
+							</tr>
+							<tr>
+								<th>Router Name:</th>
+								<td>{{ networks_list[network]['router']['name'] }}</td>
+							</tr>
+							<tr>
+								<th>Gateway IP:</th>
+								<td>{{ networks_list[network]['subnets']['gateway_ip'] }}</td>
+							</tr>
+						</table>
 
-					<table class='table' id='{{ network }}-options'>
-						<tr>
-							<th>AHHHHHHHHHHHHHHHH</th>
-							<td>I AM DYENNNGGGG</td>
-						</tr>
-					</table>
+						<table class='table' id='{{ network }}-options'>
+							<tr>
+								<th>AHHHHHHHHHHHHHHHH</th>
+								<td>I AM DYENNNGGGG</td>
+							</tr>
+						</table>
+					</div>
 				</div>
-		</div>
-
-
-				{% endfor %}
-	
-			</ul>
-		</div>
-
-    {% else %}
-    <p>No networks found for this course.</p>
-    {% endif %}
-    <hr>
-
-<div id='createNetworkModal' class='modal fade' role='dialog'>
-	<div class='modal-dialog modal-dialog-centered'>
-		<div class='modal-content'>
-			<div class='modal-header'>
-				<h4 class='modal-title'>Create Network</h4>
-				<button type='button' class='close' data-dismiss='modal'>&times;</button>
 			</div>
-			<div class='modal-body'>
-				<p> dshfkdsjfs</p>
+			{% endfor %}
+		</ul>
+	</div>
+		
+	{% else %}
+	<p>No networks found for this course.</p>
+	{% endif %}
+	<hr>
+
+	<div id='createNetworkModal' class='modal fade' role='dialog'>
+		<div class='modal-dialog modal-dialog-centered'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h4 class='modal-title'>Create Network</h4>
+					<button type='button' class='close' data-dismiss='modal'>&times;</button>
+				</div>
+				<div class='modal-body'>
+					<form action='' method='post' id='form'>
+						{{ create_form.hidden_tag() }}
+						<p> 
+							{{ create_form.network_name.label }}<br>
+							{{ create_form.network_name }}<br>
+							{% for error in create_form.network_name.errors %}
+							<span style='color: red'>[{{ error }}]</span>
+							{% endfor %}
+						</p>
+						<p> 
+							{{ create_form.network_address.label }}<br>
+							{{ create_form.network_address }}<br>
+							{% for error in create_form.network_address.errors %}
+							<span style='color: red'>[{{ error }}]</span>
+							{% endfor %}
+						</p>
+						<p>
+							<input class="submit-button btn btn-success" id="submit" name="submit" type="submit" value="Submit" onclick="submitButton(this)">
+						</p>
+					</form>
+				</div>
 			</div>
 		</div>
 	</div>
-</div>
-
-
 {% endblock %}

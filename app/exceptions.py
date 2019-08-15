@@ -1,8 +1,7 @@
 class NetworkNameAlreadyExists(Exception):
-    def __init__(self, message):
-        self.message = message
-    #def __str__(self):
-        #return repr(self.message)
+    def __init__(self, message, network_name):
+        self.network_name = network_name
+        self.message = 'ERROR: A network named "%s" already exists. Please use another name.' % self.network_name
 
 class ClassInSession(Exception):
     def __init__(self, start_time, end_time, message):

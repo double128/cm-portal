@@ -72,10 +72,10 @@ def list_project_network_details(course):
 
 def check_network_name(course, network_name):
     nt = setup_neutronclient()
-    network_name = course + "-Instructors-" + network_name + "-Network"
+    network_name_full = course + "-Instructors-" + network_name + "-Network"
     try:
-        if nt.list_networks(name=network_name)['networks'][0]['id']:
-            raise NetworkNameAlreadyExists("A network named \"" + network_name + "\" already exists. Please use another name.")
+        if nt.list_networks(name=network_name_full)['networks'][0]['id']:
+            raise NetworkNameAlreadyExists(message=None, network_name=network_name)
     except IndexError:
         # If this is thrown, it means there's no networks with this name, so continue
         pass
