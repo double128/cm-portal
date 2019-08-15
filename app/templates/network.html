@@ -18,15 +18,57 @@
 
 {% block scripts %}
 {{ super() }}
-	<script type='text/javascript' src='{{ url_for('static', filename='network/network.js') }}'></script>
+{# TODO TODO TODO RE-ENABLE THIS LATER K #}
+{# <script type='text/javascript' src='{{ url_for('static', filename='network/network.js') }}'></script>#}
 	<script>
-	$('#accordion-list').on('click', '.list-group-item', function(event) {
-		if($(this).hasClass('active')) {
-			$(this).removeClass('active');
-		} else {
-			$(this).addClass('active').siblings().removeClass('active');
+		{#a$('#accordion-list').on('click', '.list-group-item', function(event) {
+			if($(this).hasClass('active')) {
+				$(this).removeClass('active');
+			} else {
+				$(this).addClass('active').siblings().removeClass('active');
+			}
+		});#}
+{# TODO TODO TODO #}
+
+{#$(document).ready(function() {
+	$('submit-button').click(function(e) {
+		var url = '{{ url_for("network_panel") }}';
+		
+		$.ajax({
+			type: 'post',
+			url: url,
+			data: $('form').serialize(),
+			success: function(response) {
+				console.log(response);
+			},
+			error: function(error) {
+				console.log(error);
+			}
+		});
+
+	e.preventDefault();
+	});
+
+	$.ajaxSetup({
+		beforeSend: function(xhr, settings) {
+			if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+				xhr.setRequestHeader('X-CSRFToken', '{{ create_form.hidden_tag() }}')
+			}
 		}
 	});
+});#}
+
+$('#submit-button').click(function(e) {
+	e.preventDefault();
+	$.post(url, data=$('#submit-button').serialize(), function(data) {
+		if (data.status == 'error') {
+			console.log('error')
+			location.reload();
+		}
+	});
+});
+
+	
 	</script>
 {% endblock %}
 
@@ -113,6 +155,16 @@
 				<div class='modal-body'>
 					<form action='' method='post' id='form'>
 						{{ create_form.hidden_tag() }}
+						{% with messages = get_flashed_messages(with_categories=true) %}
+						{% if messages %}
+						{% for category, message in messages %}
+						{% if category == 'error' %}
+						<div class='alert alert-danger' role='alert'>{{ message }}</div>
+						{% endif %}
+						{% endfor%}
+						{% endif %}
+						{% endwith %}
+
 						<p> 
 							{{ create_form.network_name.label }}<br>
 							{{ create_form.network_name }}<br>
@@ -128,7 +180,9 @@
 							{% endfor %}
 						</p>
 						<p>
-							<input class="submit-button btn btn-success" id="submit" name="submit" type="submit" value="Submit" onclick="submitButton(this)">
+						{#<input class="submit-button btn btn-success" id="submit" name="submit" type="submit" value="Submit" onclick="submitButton(this)">#}
+						<input class="submit-button btn btn-success" id="submit" name="submit" type="submit" value="Submit">
+
 						</p>
 					</form>
 				</div>

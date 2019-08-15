@@ -186,14 +186,19 @@ def edit_quota():
 @login_required
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.course)
-    
+    error = None
+
     create_form = CreateNetworkForm()
     if create_form.validate_on_submit():
         try:
             neutron.check_network_name(current_user.course, create_form.network_name.data)
         except exceptions.NetworkNameAlreadyExists as e:
-            flash(e.message)
-            return redirect(url_for('network_panel'))
+            #flash(e.message)
+            #return redirect(url_for('network_panel'))
+            error = e.message
+            flash(e.message, 'error')
+            #return error
+            return jsonify(status='error')
         
         cidr = create_form.check_cidr()
         gateway = create_form.set_gateway(cidr)
@@ -206,7 +211,14 @@ def network_panel():
     create_form.network_address.default = '192.168.0.0'
     create_form.process()
 
-    return render_template('network.html', title='Networks', networks_list=networks_list, create_form=create_form)
+    return render_template('network.html', title='Networks', networks_list=networks_list, create_form=create_form, error=error)
+
+### TESTING ###
+#app.route('/api/network/create', methods=['GET'])
+#@login_required
+#def network_create():
+#
+#
 
 
 #@app.route('/networks/create', methods=['GET', 'POST'])
