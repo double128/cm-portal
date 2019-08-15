@@ -28,10 +28,14 @@
 		right: 10px;
 	}
 	#calendar {
-		width:80%;
 		margin: 40px auto;
 		padding: 0 10px;
 	}
+
+	.fc-today {
+    		background: #f6f8f8 !important;
+	}
+
 	</style>
 	{{ super() }}
 {% endblock %}
@@ -42,7 +46,8 @@
 	<script src="{{ url_for('static', filename='fullcalendar/packages/daygrid/main.js') }}"></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/timegrid/main.js') }}"></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/interaction/main.js') }}"></script>
-	<script src="{{ url_for('static', filename='fullcalendar/packages/bootstrap/main.js') }}"></script>
+	{# <script src="{{ url_for('static', filename='fullcalendar/packages/bootstrap/main.js') }}"></script> #}
+	<script src='{{ url_for('static', filename='bootstrap/fullcalendar.js') }}'></script>
 
 	<script>
 	document.addEventListener('DOMContentLoaded', function() {
@@ -56,7 +61,15 @@
 				right: 'prev, next, today',
 			},
 			themeSystem: 'bootstrap',
-			defaultView: 'timeGridWeek',
+			defaultView: $(window).width() < 768 ? 'timeGridDay':'timeGridWeek',
+			windowResize: function changeCalendarView() {
+						var ww = $(window).width();
+						var view = (ww <= 768) ? 'timeGridDay':'timeGridWeek';
+						var currentView = calendar.view;
+						if (view != currentView) {
+							calendar.changeView(view);
+						}
+					},
 			defaultDate: moment().format('YYYY-MM-DD'),
 			allDaySlot: false,
 			events: {
@@ -70,6 +83,8 @@
 			slotDuration: '01:00:00',
 			snapDuration: '00:10:00',
 			height: 'auto',
+			{# firstDay: 0,
+			weekNumberCalculation: 'local', #}
 			loading: function(bool) {
 				$('#loading').toggle(bool);
 			},
@@ -77,27 +92,34 @@
 				alert('Clicked on: ' + info.dateStr);
 			},
 			eventClick: function(info) {
-				$('#modalTitle').html(info.event.title);
+				if (info.event.durationEditable == true) {
+					$('#modalTitle').html(info.event.title);
 				
-				document.getElementById('modalBody').innerHTML = '';
-				document.getElementById('modalBody').innerHTML += info.event.start
-				document.getElementById('modalBody').innerHTML += info.event.end
+					document.getElementById('modalBody').innerHTML = '';
+					document.getElementById('modalBody').innerHTML += info.event.start
+					document.getElementById('modalBody').innerHTML += info.event.end
 
-				$('#calendarModal').modal();
+					$('#calendarModal').modal();
+				}
+
 			}
 		});
-
 		calendar.render();
+
+		{#$('. table').addClass('table');
+			$('.fc-head').addClass('thead-light');#}
+
+		{#console.log(document.getElementsByTagName('table').length)
+		console.log($('#calendar table').length)
+			$('#calendar table').removeClass('table-bordered').addClass('table table-bordered')#}
 	});
 	</script>
 {{ super() }}
-
 {% endblock %}
 	
 {% block app_content %}
-<h1>Course Schedule</h1>
 <div id='script-warning'>
-	Error getting data from <code>/data</code> endpoint.
+	Error getting data from <code>/api/schedule</code> endpoint.
 </div>
 <div id='loading'>loading...</div>
 <div id='calendar'></div>
