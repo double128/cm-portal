@@ -186,6 +186,8 @@ def edit_quota():
 @login_required
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.course)
+    create_form = CreateNetworkForm()
+
     return render_template('network.html', title='Networks', networks_list=networks_list)
 
 

@@ -24,6 +24,13 @@ $('#accordion-list').on('click', '.list-group-item', function(event) {
 		$(this).addClass('active').siblings().removeClass('active');
 	}
 });
+
+$('#createNetworkModal').on('show.bs.modal', function(e) {
+	var button = $(e.relatedTarget);
+	var modal = $(this);
+
+	modal.find('.modal-body').load(button.data('remote'));
+});
 </script>
 {% endblock %}
 
@@ -31,7 +38,7 @@ $('#accordion-list').on('click', '.list-group-item', function(event) {
 	<div class='row'>
 		<div class='col-md'>
 			<div class='d-flex justify-content-end'>
-    		<a href='{{ url_for('create_networks') }}' class='btn btn-primary mb-3'>Create Network</a>
+				<a href='#createNetworkModal' class='btn btn-secondary mb-3' data-remote='{{ url_for('create_networks') }}' data-toggle='modal' data-target='#createNetworkModal'>Create Network</a>
 			</div>
 		</div>
 	</div>
@@ -102,4 +109,20 @@ $('#accordion-list').on('click', '.list-group-item', function(event) {
     <p>No networks found for this course.</p>
     {% endif %}
     <hr>
+
+<div id='createNetworkModal' class='modal fade' role='dialog'>
+	<div class='modal-dialog modal-dialog-centered'>
+		<div class='modal-content'>
+			<div class='modal-header'>
+				<h4 class='modal-title'>Create Network</h4>
+				<button type='button' class='close' data-dismiss='modal'>&times;</button>
+			</div>
+			<div class='modal-body'>
+				<p> dshfkdsjfs</p>
+			</div>
+		</div>
+	</div>
+</div>
+
+
 {% endblock %}
