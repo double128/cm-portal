@@ -17,3 +17,18 @@ body {
 #login .container #login-row #login-column #login-box #login-form #register-link {
   margin-top: -85px;
 }
+
+.input-group-text {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+  
+.form-control {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left:-1px;
+}
+  
+.input-group-prepend {
+  margin-right: -1px;
+}

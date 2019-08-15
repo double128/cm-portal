@@ -11,23 +11,16 @@
 {% endblock %}
 
 {% block app_content %}
-{# <div class='page-header' id='banner'>
-	<div class='row'>
-		<div class='col-sm-6'>
-			<h1>Course Management: {{ course }}</h1>
-		</div>
-	</div>
-</div> #}
 <div class='page-header pb-3'>
-	<h1>Course Management: {{ course }}</h1>
+	<h2>Users: {{ course }}</h2>
 </div>
 
 <form action="" method="post" id="form">
 	{{ form.hidden_tag() }}
-	<table class='table'>
+	<table class='table table-hover'>
 		<thead class='thead-light'>
    			<tr>
-				<th scope='col'><i class='fa fa-check'></i></th>
+				<th scope='col'><i class='fas fa-check fa-fw'></i></th>
         			<th scope='col'>Username</th>
         			<th scope='col'>Project Name</th>
     			</tr>
@@ -35,7 +28,12 @@
 		<tbody>
 			{% for data in form if data.type == "BooleanField" %}
     			<tr>
-				<th scope='row'>{{ data }}</th>
+				<td>
+					<div class='custom-control custom-checkbox'>
+						<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input position-static'>
+						<label class='custom-control-label' for='{{ data.id }}'/>
+					</div>
+				</td>
 				<td>{% if 'nstructors' in data.description %}{{ data.label }} (TA){% else %}{{ data.label }}{% endif %}</td>
    		    		<td>{{ data.description }}</td>
     			</tr>
@@ -43,14 +41,9 @@
 		</tbody>
 	</table>
 	<p>
-	<input class="submit-button" id="reset_password" name="reset_password" type="submit" value="Reset Password" onclick="submitButton(this)">
-	<input class="submit-button" id="designate_as_ta" name="designate_as_ta" type="submit" value="Designate Student as TA" onclick="submitButton(this)">
-	<input class="submit-button" id="delete_student" name="delete_student" type="submit" value="Delete Student" onclick="submitButton(this)">
+	<input class="submit-button btn btn-primary" id="reset_password" name="reset_password" type="submit" value="Reset Password" onclick="submitButton(this)">
+	<input class="submit-button btn btn-primary" id="designate_as_ta" name="designate_as_ta" type="submit" value="Designate Student as TA" onclick="submitButton(this)">
+	<input class="submit-button btn btn-danger" id="delete_student" name="delete_student" type="submit" value="Delete Student" onclick="submitButton(this)">
 	</p>
 </form>
-<hr>
-<a href={{ url_for('edit_quota') }}>Edit Project Quota</a>
-<a href={{ url_for('image_management') }}>Image Management</a>
-<a href={{ url_for('schedule_management') }}>Course Schedule Management</a>
-<a href="">Verify Course Networks</a>
 {% endblock %}

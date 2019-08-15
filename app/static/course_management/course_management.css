@@ -10,3 +10,7 @@ input.disable-buttons {
 	pointer-events:none;
         color: #999;
 }
+
+.table-hover> tbody> tr:hover {
+	background-color:#f2f4f5;
+}

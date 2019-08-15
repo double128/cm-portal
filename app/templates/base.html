@@ -11,8 +11,10 @@
 
 		{% block styles %}
 		<!-- Bootstrap CSS --> {# We're importing a custom Bootstrap theme #}
-		<link rel='stylesheet' href='{{ url_for('static', filename='bootstrap/bootstrap.min.css') }}'/>
+		<link rel='stylesheet' href='{{ url_for('static', filename='bootstrap/flatly.min.css') }}'/>
 		<link rel='stylesheet' href='{{ url_for('static', filename='fontawesome/css/all.min.css') }}'/>
+		<style>
+		</style>
 		{% endblock %}
 
 
@@ -28,20 +30,16 @@
 		<nav class='navbar navbar-expand-md navbar-dark bg-primary'>
 			<div class='container'>
 				<div class='navbar-header'>
-					<a class='navbar-brand' href='{{ url_for('index') }}'>CM Portal</a>
+					<a class='navbar-brand' href='{{ url_for('index') }}'><i class="fas fa-cloud-upload-alt fa-lg fa-flip-horizontal"></i><span style='padding-left:10px'>CM Portal</span></a>
 				</div>
 
 				<ul class='nav navbar-nav navbar-right'>
-					{% if current_user.is_anonymous %}
-					{{ render_nav_item('login', 'Login') }}
-					{% else %}
 					<li class='nav-item dropdown'>
-						<a class='nav-link dropdown-toggle' href='#' id='navbardrop' data-toggle='dropdown'>
-							Manage
-						</a>
+						<a class='nav-link dropdown-toggle' href='#' id='navbardrop' data-toggle='dropdown'>Manage</a>
 						<div class='dropdown-menu'>
 							{#{{ render_nav_item('course_management', 'Course') }}#}
-							<a class='dropdown-item' href='{{ url_for('course_management') }}'>Course</a>
+							<a class='dropdown-item' href='{{ url_for('index') }}'>Overview</a>
+							<a class='dropdown-item' href='{{ url_for('course_management') }}'>Users</a>
 							<a class='dropdown-item' href='{{ url_for('schedule_management') }}'>Schedule</a>
 							<a class='dropdown-item' href='{{ url_for('image_management') }}'>Images</a>
 							<a class='dropdown-item' href='{{ url_for('network_panel') }}'>Networks</a>
@@ -49,7 +47,6 @@
 						</div>
 					</li>
 					{{ render_nav_item('logout', 'Logout') }}
-					{% endif %}
 				</ul>
 			</div>
 		</nav>
