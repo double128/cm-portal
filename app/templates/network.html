@@ -1,39 +1,70 @@
 {% extends "base.html" %}
 
-{% block head %}
-<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+{% block styles %}
+{{ super() }}
+<style>
+.hiddenRow {padding:0 !important;}
+</style>
 {% endblock %}
 
-{% block content %}
-    <h1>Project Networks</h1>
+
+{% block scripts %}
+{{ super() }}
+<script>
+var $lis = $('.list-group li')
+$lis.on('click', function(){
+  $lis.removeClass('active')
+  $(this).addClass('active')
+})
+</script>
+{% endblock %}
+
+{% block app_content %}
     {% if networks_list %}
-    <table class="left-align">
-        <tr>
-            <th>Name</th>
-            <th>Full name</th>
-            <th>Subnet</th>
-            <th>Allocation Pool</th>
-            <th>Gateway IP</th>
-        </tr>
-        {% for network in networks_list|sort %}
-        <tr>
-            <td><a href="{{ url_for('view_network', network_id=networks_list[network]['id'], network_name=network) }}">{{ network }}</a></td>
-            <td>{{ networks_list[network]['name'] }}</td>
-	    {% if networks_list[network]['subnets'] %}
-            <td>{{ networks_list[network]['subnets']['cidr'] }}</td>
-            <td>{{ networks_list[network]['subnets']['allocation_pools'][0]['start'] }}-{{ networks_list[network]['subnets']['allocation_pools'][0]['end'] }}</td>
-            <td>{{ networks_list[network]['subnets']['gateway_ip'] }}</td>
-	    {% else %}
-	    <td>Pending</td>
-	    <td>Pending</td>
-	    <td>Pending</td>
-	    {% endif %}
-        </tr>
-        {% endfor %}
-    </table>
+		
+		<div id='accordion'>
+			<ul class='panel list-group'>
+
+				{% for network in networks_list|sort %}
+				
+				<li class='list-group-item' data-toggle='collapse' data-target='#{{ network }}' class='accordion-toggle'>{{ network }}</li>
+				<div class='collapse' id='{{ network }}'>
+					<table class='table'>
+            <tr>
+              <th>Network Name:</th>
+              <td>{{ networks_list[network]['name'] }}</td>
+            </tr>
+            <tr>
+              <th>Subnet Name:</th>
+              <td>{{ networks_list[network]['subnets']['name'] }}</td>
+            </tr>
+            <tr>
+              <th>Subnet CIDR:</th>
+              <td>{{ networks_list[network]['subnets']['cidr'] }}</td>
+            </tr>
+            <tr>
+              <th>Address Pool:</th>
+              <td>{{ networks_list[network]['subnets']['allocation_pools'][0]['start'] }}-{{ networks_list[network]['subnets']['allocation_pools'][0]['end'] }}</td>
+            </tr>
+            <tr>
+              <th>Router Name:</th>
+              <td>{{ networks_list[network]['router']['name'] }}</td>
+            </tr>
+            <tr>
+              <th>Gateway IP:</th>
+              <td>{{ networks_list[network]['subnets']['gateway_ip'] }}</td>
+            </tr>
+          </table>
+				</div>
+				
+				{% endfor %}
+
+			</ul>
+		</div>
+
     {% else %}
     <p>No networks found for this course.</p>
     {% endif %}
     <hr>
-    <a href="{{ url_for('create_networks') }}">Create Network</a>
+    <a href='{{ url_for('create_networks') }}' class='btn btn-primary'>Create Network</a>
 {% endblock %}

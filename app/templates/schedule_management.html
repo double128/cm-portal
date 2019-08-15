@@ -1,22 +1,47 @@
 {% extends "base.html" %}
 
-{% block head %}
-	<meta charset='utf-8' />
-	<script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js'></script>
-
+{% block styles %}
 	<link href="{{ url_for('static', filename='fullcalendar/packages/core/main.css') }}" rel='stylesheet' />
 	<link href="{{ url_for('static', filename='fullcalendar/packages/daygrid/main.css') }}" rel='stylesheet'/>
 	<link href="{{ url_for('static', filename='fullcalendar/packages/timegrid/main.css') }}" rel='stylesheet'/>
+	<link href="{{ url_for('static', filename='fullcalendar/packages/bootstrap/main.css') }}" rel='stylesheet'/>
 
+	<style>
+	#modal {
+		display: none;
+	}
+	#script-warning {
+		display: none;
+		background: #eee;
+		border-bottom: 1px solid #ddd;
+		padding: 0 10px;
+		line-height: 40px;
+		text-align: center;
+		font-weight: bold;
+		font-size: 12px;
+		color: red;
+	}
+	#loading {
+		display: none;
+		position: absolute;
+		top: 10px;
+		right: 10px;
+	}
+	#calendar {
+		width:80%;
+		margin: 40px auto;
+		padding: 0 10px;
+	}
+	</style>
+	{{ super() }}
+{% endblock %}
+
+{% block scripts %}
+	<script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js'></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/core/main.js') }}"></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/daygrid/main.js') }}"></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/timegrid/main.js') }}"></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/interaction/main.js') }}"></script>
-	
-	{#<link href='https://use.fontawesome.com/releases/v5.0.6/css/all.css' rel='stylesheet'>#}
-	{#<link href='https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css' rel='stylesheet' />#}
-	
-	<link href="{{ url_for('static', filename='fullcalendar/packages/bootstrap/main.css') }}" rel='stylesheet'/>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/bootstrap/main.js') }}"></script>
 
 	<script>
@@ -52,53 +77,24 @@
 				alert('Clicked on: ' + info.dateStr);
 			},
 			eventClick: function(info) {
-				{#alert('Clicked on: ' + info.event.title);#}
-				var modal = document.getElementById('modal');
-				modal.style.display = "block";
+				$('#modalTitle').html(info.event.title);
+				
+				document.getElementById('modalBody').innerHTML = '';
+				document.getElementById('modalBody').innerHTML += info.event.start
+				document.getElementById('modalBody').innerHTML += info.event.end
+
+				$('#calendarModal').modal();
 			}
 		});
 
 		calendar.render();
 	});
 	</script>
-	
-	<style>
-{#	body {
-		margin: 0;
-		padding: 0;
-		font-family: "Lucida Grande",Helvetica,Arial,Verdana,sans-serif;
-		font-size: 14px;
-	}
-#}
-	#modal {
-		display: none;
-	}
-	#script-warning {
-		display: none;
-		background: #eee;
-		border-bottom: 1px solid #ddd;
-		padding: 0 10px;
-		line-height: 40px;
-		text-align: center;
-		font-weight: bold;
-		font-size: 12px;
-		color: red;
-	}
-	#loading {
-		display: none;
-		position: absolute;
-		top: 10px;
-		right: 10px;
-	}
-	#calendar {
-		width:80%;
-		margin: 40px auto;
-		padding: 0 10px;
-	}
-	</style>
-{% endblock %}
+{{ super() }}
 
-{% block content %}
+{% endblock %}
+	
+{% block app_content %}
 <h1>Course Schedule</h1>
 <div id='script-warning'>
 	Error getting data from <code>/data</code> endpoint.
@@ -106,10 +102,17 @@
 <div id='loading'>loading...</div>
 <div id='calendar'></div>
 
-<div id='modal' class='modal'>
-	<div class='createModal'>
-		<p>Hi there!</p>
+<div id='calendarModal' class='modal fade'>
+	<div class='modal-dialog modal-dialog-centered'>
+		<div class='modal-content'>
+			<div class='modal-header'>
+				<h4 id='modalTitle' class='modal-title'></h4>
+				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span> <span class="sr-only">close</span></button>
+			</div>
+			<div id='modalBody' class='modal-body'> </div>
+		</div>
 	</div>
 </div>
+
 
 {% endblock %}
