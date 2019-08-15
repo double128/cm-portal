@@ -12,30 +12,46 @@
 	</head>
 	<body>
 
-	<div id="login">
-    <div class="container">
-      <div id="login-row" class="row justify-content-center align-items-center">
-				<div id="login-column" class="col-xl-6 col-lg-6 col-md-8 col-sm-12 col-12">
+	<div id='login'>
+	
+		<div class='container' style='max-width:800px;padding-top:5rem;'>
+			
+			<div id='login-row' class='justify-content-center align-items-center mt-0'>
+				{% with messages = get_flashed_messages() %}
+				{% if messages %}
+				{% for message in messages %}
+				{% if 'failed' in message %}
+				<div class='alert alert-danger d-flex' role='alert'>{{ message }}</div>
+				{% else %}
+				<div class='alert alert-warning d-flex' role='alert'>{{ message }}</div>
+				{% endif %}
+                	        {% endfor %}
+				{% else %}
+				<div class='alert alert-warning' style='visibility:hidden;'>I'm hiding here, shhh.</div>
+				{% endif %}
+				{% endwith %}
+		
+				<div id='login-column'>
 					<div id="login-box">
-            <form id="login-form" class="form" action="" method="post" autocomplete='off'>
+            					<form id="login-form" class="form" action="" method="post" autocomplete='off'>
 							{{ form.hidden_tag() }} 
 
-									<div class='form-group required'>
-										<label class='sr-only' for='username'>Username</label>
-										<div class='input-group-prepend'>
-											<div class='input-group-text'><i class='fa fa-user fa-fw'></i></div>
-											<input class="form-control" id="username" name="username" placeholder="Username" required type="text">
-										</div>
+							<div class='form-group required'>
+								<label class='sr-only' for='username'>Username</label>
+								<div class='input-group-prepend'>
+									<div class='input-group-text'><i class='fa fa-user fa-fw'></i></div>
+										<input class="form-control" id="username" name="username" placeholder="Username" required type="text">
 									</div>
+								</div>
 								
-									<div class='form-group required'>
-										<label class='sr-only' for='course'>Course</label>
-										<div class='input-group-prepend'>
-											<div class='input-group-text'><i class='fa fa-users fa-fw'></i></div>
-											<input class="form-control" id="course" name="course" placeholder="Course ID" required type="text" maxlength='4'>
-										</div>
-									</div>
-
+							<div class='form-group required'>
+								<label class='sr-only' for='course'>Course</label>
+								<div class='input-group-prepend'>
+									<div class='input-group-text'><i class='fa fa-users fa-fw'></i></div>
+									<input class="form-control" id="course" name="course" placeholder="Course ID" required type="text" maxlength='4'>
+								</div>
+							</div>
+	
 							<div class='form-group required'>
 								<label class='sr-only' for='password'></label>
 								<div class='input-group-prepend'>
@@ -44,6 +60,7 @@
 								</div>
 							</div>
 							<input class='btn btn-primary btn-block' type='submit' id='submit' name='submit' value='Sign In'>
+
 						</form>
 					</div>
 				</div>
