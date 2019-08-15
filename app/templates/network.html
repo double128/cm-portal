@@ -30,19 +30,27 @@
 		});#}
 {# TODO TODO TODO #}
 
-{#$(document).ready(function() {
-	$('submit-button').click(function(e) {
-		var url = '{{ url_for("network_panel") }}';
+{# DO NOT REMOVE 
+$('#createNetworkModal').on('hidden.bs.modal', function(e) {
+	document.getElementByTagName('input').reset();
+});#}
+
+$(document).ready(function() {
+	console.log('document ready');
+	$('#submit-network').click(function(e) {
+		console.log('inside click func');
+		var url = '{{ url_for("network_create") }}';
 		
 		$.ajax({
 			type: 'post',
 			url: url,
-			data: $('form').serialize(),
+			data: $('#network-create-form').serialize(),
 			success: function(response) {
 				console.log(response);
 			},
-			error: function(error) {
-				console.log(error);
+			error: function(request, status, message) {
+				console.log(status);
+				console.log(message);
 			}
 		});
 
@@ -56,9 +64,9 @@
 			}
 		}
 	});
-});#}
+});
 
-$('#submit-button').click(function(e) {
+{#$('#submit-button').click(function(e) {
 	e.preventDefault();
 	$.post(url, data=$('#submit-button').serialize(), function(data) {
 		if (data.status == 'error') {
@@ -66,7 +74,7 @@ $('#submit-button').click(function(e) {
 			location.reload();
 		}
 	});
-});
+});#}
 
 	
 	</script>
@@ -153,9 +161,9 @@ $('#submit-button').click(function(e) {
 					<button type='button' class='close' data-dismiss='modal'>&times;</button>
 				</div>
 				<div class='modal-body'>
-					<form action='' method='post' id='form'>
+					<form action='' method='post' id='network-create-form'>
 						{{ create_form.hidden_tag() }}
-						{% with messages = get_flashed_messages(with_categories=true) %}
+						{#{% with messages = get_flashed_messages(with_categories=true) %}
 						{% if messages %}
 						{% for category, message in messages %}
 						{% if category == 'error' %}
@@ -163,7 +171,7 @@ $('#submit-button').click(function(e) {
 						{% endif %}
 						{% endfor%}
 						{% endif %}
-						{% endwith %}
+						{% endwith %}#}
 
 						<p> 
 							{{ create_form.network_name.label }}<br>
@@ -181,7 +189,7 @@ $('#submit-button').click(function(e) {
 						</p>
 						<p>
 						{#<input class="submit-button btn btn-success" id="submit" name="submit" type="submit" value="Submit" onclick="submitButton(this)">#}
-						<input class="submit-button btn btn-success" id="submit" name="submit" type="submit" value="Submit">
+						<input id='submit-network' class="submit-button btn btn-success" name="submit" type="submit" value="Submit">
 
 						</p>
 					</form>
