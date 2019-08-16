@@ -28,25 +28,39 @@
 		{% block nav %}
 		<nav class='navbar navbar-expand-md navbar-dark bg-primary'>
 			<div class='container'>
-				<div class='navbar-header'>
-					<a class='navbar-brand' href='{{ url_for('index') }}'><i class="fas fa-cloud-upload-alt fa-lg fa-flip-horizontal"></i><span style='padding-left:10px'>CM Portal</span></a>
-				</div>
+				<a class='navbar-brand' href='{{ url_for('index') }}'><i class="fas fa-cloud-upload-alt fa-lg fa-flip-horizontal"></i><span style='padding-left:10px'>CM Portal</span></a>
 
-				<ul class='nav navbar-nav navbar-right'>
-					<li class='nav-item dropdown'>
-						<a class='nav-link dropdown-toggle' href='#' id='navbardrop' data-toggle='dropdown'>Manage</a>
-						<div class='dropdown-menu'>
-							{#{{ render_nav_item('course_management', 'Course') }}#}
-							<a class='dropdown-item' href='{{ url_for('index') }}'>Overview</a>
-							<a class='dropdown-item' href='{{ url_for('course_management') }}'>Users</a>
-							<a class='dropdown-item' href='{{ url_for('schedule_management') }}'>Schedule</a>
-							<a class='dropdown-item' href='{{ url_for('image_management') }}'>Images</a>
-							<a class='dropdown-item' href='{{ url_for('network_panel') }}'>Networks</a>
-							<a class='dropdown-item' href='{{ url_for('edit_quota') }}'>Quota</a>
-						</div>
-					</li>
-					{{ render_nav_item('logout', 'Logout') }}
-				</ul>
+			
+				<button class='navbar-toggler' type='button' data-toggle='collapse' data-target='#navCollapse' style='border:none; outline:none;'>
+					<span class='navbar-toggler-icon'></span>
+				</button>
+
+				<div id='navCollapse' class='navbar-collapse collapse'>
+					<div class='navbar-text'>
+						{% if navbar_text %}<span>{{ navbar_text }}</span>{% endif %}
+					</div>
+					<ul class='navbar-nav ml-auto'>
+						<li class='nav-item dropdown'>
+							<a class='nav-link dropdown-toggle' href='#' id='navbardrop' data-toggle='dropdown'>Manage</a>
+							<div class='dropdown-menu'>
+								<a class='dropdown-item' href='{{ url_for('index') }}'>Overview</a>
+								<a class='dropdown-item' href='{{ url_for('course_management') }}'>Users</a>
+								<a class='dropdown-item' href='{{ url_for('schedule_management') }}'>Schedule</a>
+								<a class='dropdown-item' href='{{ url_for('image_management') }}'>Images</a>
+								<a class='dropdown-item' href='{{ url_for('network_panel') }}'>Networks</a>
+								<a class='dropdown-item' href='{{ url_for('edit_quota') }}'>Quota</a>
+							</div>
+						</li>
+
+						<li class='nav-item dropdown'>
+							<a class='nav-link dropdown-toggle' id='navbardrop' data-toggle='dropdown'>Account</a>
+							<div class='dropdown-menu'>
+								<a class='dropdown-item' href='{{ url_for('logout') }}'>Logout</a>
+							</div>
+						</li>
+						
+					</ul>
+				</div>
 			</div>
 		</nav>
 		{% endblock %}

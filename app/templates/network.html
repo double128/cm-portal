@@ -33,13 +33,9 @@
 		$('input[type="text"]').keyup(function() {
 			$(this).removeClass('is-invalid');
 			var textInput = this.value;
-			if (textInput == '{{ create_form.network_name.data }}') {
+			if ((textInput == '{{ create_form.network_name.data }}') || (textInput == '{{ create_form.network_address.data }}')) {
 				$(this).addClass('is-invalid');
 			};
-			{#$(this).removeClass('is-invalid');#}
-			{#if ($(this).val('{{ create_form.network_name.data }}')) {
-				$(this).addClass('is-invalid');
-			};#}
 		});
 		
 		$('#createNetworkModal').on('hidden.bs.modal', function() {

@@ -11,40 +11,37 @@
 {% endblock %}
 
 {% block app_content %}
-<div class='page-header pb-3'>
-	<h2>Users: {{ course }}</h2>
-</div>
+	<form action="" method="post" id="form">
+		{{ form.hidden_tag() }}
+		<div class='d-flex justify-content-end pb-2'>
+			<div class='pr-1'><input class="submit-button btn btn-primary" id="reset_password" name="reset_password" type="submit" value="Reset Password" onclick="submitButton(this)"></div>
+			<div class='pr-1 pl-1'><input class="submit-button btn btn-primary" id="designate_as_ta" name="designate_as_ta" type="submit" value="Designate Student as TA" onclick="submitButton(this)"></div>
+			<div class='pl-1'><input class="submit-button btn btn-danger" id="delete_student" name="delete_student" type="submit" value="Delete Student" onclick="submitButton(this)"></div>
+		</div>
 
-<form action="" method="post" id="form">
-	{{ form.hidden_tag() }}
-	<table class='table table-hover'>
-		<thead class='thead-light'>
-   			<tr>
-				<th><i style='margin-left:15px' class='fas fa-check fa-fw'></i></div></th>
-				<th>Username</th>
-        			<th>Project Name</th>
-    			</tr>
-		</thead>
-		<tbody>
-			{% for data in form if data.type == "BooleanField" %}
-    			<tr>
-				<td>
-					<div class='custom-control custom-checkbox'>
-						<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input position-static'>
-						<label class='custom-control-label' for='{{ data.id }}'/>
-					</div>
-				</td>
-				<td>{% if 'nstructors' in data.description %}{{ data.label }} (TA){% else %}{{ data.label }}{% endif %}</td>
-   		    		<td>{{ data.description }}</td>
-    			</tr>
-    			{% endfor %}
-		</tbody>
-	</table>
-	<hr>
-	<p>
-	<input class="submit-button btn btn-primary" id="reset_password" name="reset_password" type="submit" value="Reset Password" onclick="submitButton(this)">
-	<input class="submit-button btn btn-primary" id="designate_as_ta" name="designate_as_ta" type="submit" value="Designate Student as TA" onclick="submitButton(this)">
-	<input class="submit-button btn btn-danger" id="delete_student" name="delete_student" type="submit" value="Delete Student" onclick="submitButton(this)">
-	</p>
-</form>
+		<table class='table table-hover'>
+			<thead class='thead-light'>
+   				<tr>
+					<th><i style='margin-left:15px' class='fas fa-check fa-fw'></i></div></th>
+					<th>Username</th>
+        				<th>Project Name</th>
+    				</tr>
+			</thead>
+			<tbody>
+				{% for data in form if data.type == "BooleanField" %}
+    				<tr>
+					<td>
+						<div class='custom-control custom-checkbox'>
+							<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input position-static'>
+							<label class='custom-control-label' for='{{ data.id }}'/>
+						</div>
+					</td>
+					<td>{% if 'nstructors' in data.description %}{{ data.label }} (TA){% else %}{{ data.label }}{% endif %}</td>
+   		    			<td>{{ data.description }}</td>
+    				</tr>
+    				{% endfor %}
+			</tbody>
+		</table>
+		<hr>
+	</form>
 {% endblock %}

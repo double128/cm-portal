@@ -70,45 +70,23 @@ def list_project_network_details(course):
     return the_list
 
 
-def check_network_name(course, network_name):
-    nt = setup_neutronclient()
-    network_name_full = course + "-Instructors-" + network_name + "-Network"
-    try:
-        if nt.list_networks(name=network_name_full)['networks'][0]['id']:
-            raise NetworkNameAlreadyExists(message=None, network_name=network_name)
-    except IndexError:
-        # If this is thrown, it means there's no networks with this name, so continue
-        pass
-
-"""
-CREATE NETWORK
-"""
 def create_network(project_id, network_name):
     nt = setup_neutronclient()
     nt.create_network(body={'network': {'name': network_name, 'project_id': project_id, 'router:external': False}})
     return get_network_id(network_name)
 
 
-"""
-DELETE NETWORK
-"""
 def delete_network(network_id):
     nt = setup_neutronclient()
     nt.delete_network(network_id)
 
 
-"""
-CREATE SUBNET
-"""
 def create_subnet(project_id, network_id, subnet_name, cidr, gateway):
     nt = setup_neutronclient()
     nt.create_subnet(body={'subnet': {'name': subnet_name, 'cidr': cidr, 'gateway_ip': gateway, 'ip_version': 4, 'network_id': network_id, 'project_id': project_id}})
     return get_subnet_id(subnet_name)
 
 
-"""
-CREATE ROUTER
-"""
 def create_router(project_id, subnet_id, router_name, external_network_id):
     nt = setup_neutronclient()
     nt.create_router(body={'router': {'name': router_name, 'project_id': project_id, 'external_gateway_info': {'network_id': external_network_id}}})
@@ -117,24 +95,20 @@ def create_router(project_id, subnet_id, router_name, external_network_id):
     return router_id
     
 
-""" 
-DELETE ROUTER
-"""
 def delete_router(router_id, subnet_id):
     nt = setup_neutronclient()
     nt.remove_interface_router(router_id, body={'subnet_id': subnet_id})
     nt.delete_router(router_id)
 
 
-"""
-ASYNC WRAPPERS
-"""
-def network_create_wrapper(project, course, network_name, cidr, gateway):
+def network_create_wrapper(project, course, network_name, cidr):
+    import netaddr
     nt = setup_neutronclient()
-
     projects = get_projects(course)
     all_projects = {**projects['instructors'], **projects['students']}
     external_network_id = nt.list_networks(name='HRL')['networks'][0]['id']
+    cidr = netaddr.IPNetwork(cidr + '/24')
+    gateway = netaddr.IPNetwork(cidr)[1]
 
     for project in all_projects:
         network_name_template = project + '-' + network_name
@@ -230,17 +204,12 @@ def async_router_delete(self, router_id, subnet_id):
     nt.delete_router(router_id)
 
 
-""" 
-UTILITIES
-"""
 def merge_network_dicts(project, network):
     all_networks = {project: {**network}, **network['children']}
     all_networks[project].pop('children', None)
     return all_networks
 
-"""
-GETTERS
-"""
+
 def get_network_id(network_name):
     nt = setup_neutronclient()
     return nt.find_resource('network', network_name)['id'] 
@@ -256,10 +225,6 @@ def get_router_id(router_name):
     return nt.find_resource('router', router_name)['id']
 
 
-"""
-KEYSTONE_MODEL DELETE USER NETWORKS
-"""
-
 @celery.task(bind=True)
 def async_delete_user_networks(self, the_cooler_list, user_project):
     nt = setup_neutronclient()
@@ -273,9 +238,6 @@ def async_delete_user_networks(self, the_cooler_list, user_project):
             nt.delete_network(the_cooler_list[key]['children'][user_project]['id'])
 
 
-"""
-TOGGLES
-"""
 def toggle_network_dhcp(project, network, change):
     nt = setup_neutronclient()
     all_networks = merge_network_dicts(project, network)
@@ -310,4 +272,57 @@ def toggle_network_internet_access(project, course, network, network_name, chang
         router_delete_wrapper(project, network)
     elif change is True:
         router_create_wrapper(project, course, network_name, network)
+
+
+def verify_network_integrity(course, network):
+    nt = setup_neutronclient()
+    projects = get_projects(course)
+    
+    problem_children = {}
+
+    for name in network:
+        network_name = name
+        subnet_ip = network[network_name]['subnets']['cidr']
+        gateway_ip = network[network_name]['subnets']['gateway_ip']
+    
+        for project in projects['students']:
+            problem_children[project] = {}
+
+            if not project in network[network_name]['children']:
+                problem_children[project] = {'Project': 'Child project not found'}
+            else:
+                child_network_name = project + '-Network'
+                if not network[network_name]['children'][project]['name'] == child_network_name:
+                    problem_children[project] = {network_name: { 'Network': 'Network not found in child project'}}
+                else:
+                    child_subnet_name = project + '-Subnet'
+                    if not network[network_name]['children'][project]['subnets'] == child_subnet_name:
+                        problem_children[project] = {network_name: {'Subnet': 'Subnet not found in child project'}}
+                        
+        
+            """
+            else:
+                if not 'subnets' in network[network_name]['children'][project]:
+                    problem_children[project]['Subnet'] = 'Subnet not found'
+                else:
+                    if not network[network_name]['children'][project]['subnets']['cidr'] == subnet_ip:
+                        problem_children[project]['CIDR'] = 'Subnet IP is wrong'
+            
+                    if not network[network_name]['children'][project]['subnets']['gateway_ip'] == gateway_ip:
+                        problem_children[project]['Gateway'] = "Gateway IP is wrong"
+
+                    if not 'router' in network[network_name]['children'][project]:
+                        problem_children[project]['Router'] = "Router doesn't exist"
+            """
+
+    print(problem_children)
+
+
+
+
+                
+
+
+        
+        
 

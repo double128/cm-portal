@@ -86,8 +86,6 @@ def upload():
 @login_required
 def course_management():
     from app.forms import create_student_checkbox_list
-    #course_schedule = Course.query.filter_by(course=current_user.course).first()
-    #course_schedule = course_schedule.scheduled_times.all()
 
     course_student_list = keystone.get_course_users(current_user.course)
     form = create_student_checkbox_list(course_student_list)
@@ -114,16 +112,12 @@ def course_management():
             session['to_delete'] = to_delete
             return redirect(url_for('delete_students'))
 
-    #return render_template('course_management.html', course_student_list=course_student_list, course=current_user.course, form=form, course_schedule=course_schedule)
-    return render_template('course_management.html', title='Course Management', course_student_list=course_student_list, course=current_user.course, form=form)
+    return render_template('course_management.html', title='Course Management', course_student_list=course_student_list, course=current_user.course, form=form, navbar_text='Course Management: ' + current_user.course)
 
 
 @app.route('/manage/schedule', methods=['GET', 'POST'])
 @login_required
 def schedule_management():
-    #course_schedule = Course.query.filter_by(course=current_user.course).first().scheduled_times.all()
-    #full_schedule = Schedule.query.all()
-    #return render_template('schedule_management.html', course_schedule=course_schedule, full_schedule=full_schedule)
     return render_template('schedule_management.html', title='Schedule Management')
 
 
@@ -187,123 +181,26 @@ def edit_quota():
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.course)
     create_form = CreateNetworkForm()
-    create_form.course_storage.data = current_user.course
+    create_form.course_storage.data = current_user.course # Store the course value in the form so the validator can use it
     
     if create_form.validate_on_submit():
-        #network_name = create_form.check_network_name(current_user.course)
-        #cidr = create_form.check_cidr()
-        #gateway = create_form.set_gateway(cidr)
-        #create_form.check_network_address()
-        
-        #print(network_name)
-        #print(cidr)
-        #print(gateway)
         if not create_form.errors:
-            #neutron.network_create_wrapper(current_user.project, current_user.course, create_form.network_name.data, cidr, gateway)
+            neutron.network_create_wrapper(current_user.project, current_user.course, create_form.network_name.data, create_form.network_address.data)
             flash('Network creation in progress')
             return redirect(url_for('index'))
-
-    #create_form.network_address.default = '192.168.0.0'
-    #create_form.process()
-
-    return render_template('network.html', title='Networks', networks_list=networks_list, create_form=create_form)
-
-### TESTING ###
-#@app.route('/api/network/create', methods=['GET', 'POST'])
-#@login_required
-#def network_create():
-#    data = request.form.to_dict()
-#    network_name = data['network_name']
-#    network_address = data['network_address']
-
-#    try:
-#        neutron.check_network_name(current_user.course, network_name)
-#    except exceptions.networknamealreadyexists as e:
-#        return jsonify(success=false, message=e.message)
-
-    # TODO: ERROR HANDLE THIS
-#    try:
-#        cidr, gateway = check_network_address(network_address)
-#    except:
-#        pass
-
-#    print(cidr)
-#    print(gateway)
-
-#   response = jsonify(success=True)
-#    return response
-
-
-#def check_network_address(network_address):
-#    from netaddr import IPAddress, IPNetwork
-#    subnet = network_address + '/24'
-#    cidr = IPNetwork(subnet)
-#    if cidr.ip != cidr.network:
-#        return jsonify(success=False, message='Invalid network IP for subnet')
-#    gateway = IPNetwork(cidr)[1]
-#    return cidr, gateway
     
+    return render_template('network.html', title='Networks', networks_list=networks_list, create_form=create_form, navbar_text='Networks: ' + current_user.course)
 
 
-
-    #if create_form.validate_on_submit():
-    #    try:
-    #        neutron.check_network_name(current_user.course, create_form.network_name.data)
-    #    except exceptions.NetworkNameAlreadyExists as e:
-    #        #flash(e.message)
-    #        #return redirect(url_for('network_panel'))
-    #        error = e.message
-    #        flash(e.message, 'error')
-    #        #return error
-    #        return jsonify(status='error')
-    #    
-    #    cidr = create_form.check_cidr()
-    #    gateway = create_form.set_gateway(cidr)
-#
-#        neutron.network_create_wrapper(current_user.project, current_user.course, create_form.network_name.data, cidr, gateway)
-#
-#        flash('Network creation in progress')
-#        return redirect(url_for('index'))
-#
-#    create_form.network_address.default = '192.168.0.0'
-#    create_form.process()
-    
-
-
-
-#@app.route('/networks/create', methods=['GET', 'POST'])
+# DEPRECATED FOR REMOVAL
+#@app.route('/networks/<network_name>_<network_id>', methods=['GET', 'POST'])
 #@login_required
-#def create_networks():
-#    form = CreateNetworkForm()
-#    if form.validate_on_submit():
-#        try:
-#            neutron.check_network_name(current_user.course, form.network_name.data)
-#        except exceptions.NetworkNameAlreadyExists as e:
-#            flash(e)
-#            return redirect(url_for('create_networks'))
-#        
-#        cidr = form.check_cidr()
-#        gateway = form.set_gateway(cidr)
+#def view_network(network_id, network_name):
+#    networks_list = neutron.list_project_network_details(current_user.course)
+#    this_network = networks_list[network_name]
+#    session['this_network'] = this_network
 #
-#        neutron.network_create_wrapper(current_user.project, current_user.course, form.network_name.data, cidr, gateway)
-#
-#        flash('Network creation in progress')
-#        return redirect(url_for('index'))
-#
-#    form.network_address.default = '192.168.0.0'
-#    form.process()
-#
-#    return render_template('create_network.html', title='Create Networks', form=form)
-
-
-@app.route('/networks/<network_name>_<network_id>', methods=['GET', 'POST'])
-@login_required
-def view_network(network_id, network_name):
-    networks_list = neutron.list_project_network_details(current_user.course)
-    this_network = networks_list[network_name]
-    session['this_network'] = this_network
-
-    return render_template('view_network.html', title=network_name, this_network=this_network, network_id=network_id, network_name=network_name)
+#    return render_template('view_network.html', title=network_name, this_network=this_network, network_id=network_id, network_name=network_name)
 
 
 @app.route('/networks/<network_name>_<network_id>/edit', methods=['GET', 'POST'])
@@ -447,7 +344,8 @@ def testing():
 
    # print(course_schema.dump(course_s).data)
    # print(schedule_schema.dump(schedule).data)
-
+    networks_list = neutron.list_project_network_details(current_user.course)
+    neutron.verify_network_integrity(current_user.course, networks_list)
     return render_template('testing.html')
 
 
