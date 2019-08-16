@@ -42,18 +42,64 @@ class QuotaForm(FlaskForm):
 
 class CreateNetworkForm(FlaskForm):
     network_name = StringField('Network Name', validators=[InputRequired(), Length(max=32), Regexp('^[A-Za-z0-9\-]+$', message="Network name must only contain alphanumeric characters and hyphens (-).")])
-    network_address = StringField('Network Address', validators=[DataRequired(), IPAddress()])
+    #network_address = StringField('Network Address', validators=[DataRequired(), IPAddress()])
+    network_address = StringField('Network Address', validators=[InputRequired()])
+    course_storage = StringField()
     submit = SubmitField('Create Network')
+    
+    def validate_network_name(form, field):
+        from app.neutron_model import setup_neutronclient
+        nt = setup_neutronclient()
+        try:
+            if nt.list_networks(name=form.course_storage.data + '-Instructors-' + str(field.data) + '-Network')['networks'][0]['id']:
+                raise ValidationError('A network with that name already exists.')
+        except IndexError:
+            pass
 
+    def validate_network_address(form, field):
+        print('inside validate network address')
+        #from netaddr import IPAddress, IPNetwork
+        import netaddr
+        try:
+            cidr = netaddr.IPNetwork(str(field.data) + '/24')
+            print(cidr)
+            print(cidr.ip)
+            print(cidr.network)
+            if cidr.ip != cidr.network:
+                raise ValidationError('Invalid network IP.')
+        except netaddr.core.AddrFormatError:
+            raise ValidationError('That is not a valid IP address.')
+            
+
+   
+    #def check_network_name(self, course):
+    #    from app.neutron_model import setup_neutronclient
+    #    nt = setup_neutronclient()
+    #    network_name_full = course + "-Instructors-" + str(self.network_name.data) + "-Network"
+    #    try:
+    #        if nt.list_networks(name=network_name_full)['networks'][0]['id']:
+    #            self.network_name.errors.append("A network already exists with that name.")
+    #    except IndexError:
+    #        # If this is thrown, no networks exist with this name, so continue
+    #        pass
+
+    def check_network_address(self):
+        from netaddr import IPAddress, IPNetwork
+        cidr = IPNetwork(str(self.network_address.data) + '/24')
+        if cidr.ip != cidr.network:
+            raise ValidationError("Invalid network IP")
+        
     def check_cidr(self):
         from netaddr import IPAddress, IPNetwork
         subnet = str(self.network_address.data) + '/24'
         cidr = IPNetwork(subnet)
+
+
         if cidr.ip == cidr.network:
             return cidr.cidr
         else:
             self.network_address.errors.append("Invalid network IP for subnet")
-            return False
+            return None
 
     def set_gateway(self, cidr):
         if cidr == False:    # If the first check failed

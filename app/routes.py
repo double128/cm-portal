@@ -187,75 +187,64 @@ def edit_quota():
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.course)
     create_form = CreateNetworkForm()
+    create_form.course_storage.data = current_user.course
+    
+    if create_form.validate_on_submit():
+        #network_name = create_form.check_network_name(current_user.course)
+        #cidr = create_form.check_cidr()
+        #gateway = create_form.set_gateway(cidr)
+        #create_form.check_network_address()
+        
+        #print(network_name)
+        #print(cidr)
+        #print(gateway)
+        if not create_form.errors:
+            #neutron.network_create_wrapper(current_user.project, current_user.course, create_form.network_name.data, cidr, gateway)
+            flash('Network creation in progress')
+            return redirect(url_for('index'))
+
+    #create_form.network_address.default = '192.168.0.0'
+    #create_form.process()
 
     return render_template('network.html', title='Networks', networks_list=networks_list, create_form=create_form)
 
 ### TESTING ###
-@app.route('/api/network/create', methods=['GET', 'POST'])
-@login_required
-def network_create():
-    print('YOU ARE INSIDE NETWORK_CREATE')
-    print('#')
-    print('#')
-    print('#')
-    print('#')
-    print('#')
-    print('#')
-    print('#')
-    print('#')
-    print('#')
-    print('#')
-    data = request.form.to_dict()
-    network_name = data['network_name']
-    network_address = data['network_address']
+#@app.route('/api/network/create', methods=['GET', 'POST'])
+#@login_required
+#def network_create():
+#    data = request.form.to_dict()
+#    network_name = data['network_name']
+#    network_address = data['network_address']
 
-    try:
-        neutron.check_network_name(current_user.course, network_name)
-    except exceptions.NetworkNameAlreadyExists as e:
-        return jsonify(success=False, message=e.message)
+#    try:
+#        neutron.check_network_name(current_user.course, network_name)
+#    except exceptions.networknamealreadyexists as e:
+#        return jsonify(success=false, message=e.message)
 
     # TODO: ERROR HANDLE THIS
-    try:
-        cidr, gateway = check_network_address(network_address)
-    except:
-        pass
+#    try:
+#        cidr, gateway = check_network_address(network_address)
+#    except:
+#        pass
 
-    print(cidr)
-    print(gateway)
+#    print(cidr)
+#    print(gateway)
 
-    response = jsonify(success=True)
-    return response
+#   response = jsonify(success=True)
+#    return response
 
 
-def check_network_address(network_address):
-    from netaddr import IPAddress, IPNetwork
-    subnet = network_address + '/24'
-    cidr = IPNetwork(subnet)
-    if cidr.ip != cidr.network:
-        return jsonify(success=False, message='Invalid network IP for subnet')
-    gateway = IPNetwork(cidr)[1]
-    return cidr, gateway
+#def check_network_address(network_address):
+#    from netaddr import IPAddress, IPNetwork
+#    subnet = network_address + '/24'
+#    cidr = IPNetwork(subnet)
+#    if cidr.ip != cidr.network:
+#        return jsonify(success=False, message='Invalid network IP for subnet')
+#    gateway = IPNetwork(cidr)[1]
+#    return cidr, gateway
     
 
 
-
-#def check_cidr(self):
-#        from netaddr import IPAddress, IPNetwork
-#        subnet = str(self.network_address.data) + '/24'
-#        cidr = IPNetwork(subnet)
-#        if cidr.ip == cidr.network:
-#            return cidr.cidr
-#        else:
-#            self.network_address.errors.append("Invalid network IP for subnet")
-#            return False
-
-#def set_gateway(self, cidr):
-# if cidr == False:    # If the first check failed
-#            return
-#        else:
-#            from netaddr import IPAddress, IPNetwork
-#            gateway = IPNetwork(cidr)
-#            return gateway[1]
 
     #if create_form.validate_on_submit():
     #    try:

@@ -18,9 +18,35 @@
 
 {% block scripts %}
 {{ super() }}
-{# TODO TODO TODO RE-ENABLE THIS LATER K #}
-{# <script type='text/javascript' src='{{ url_for('static', filename='network/network.js') }}'></script>#}
+<script type='text/javascript' src='{{ url_for('static', filename='network/network.js') }}'></script>
 	<script>
+		var formErrors = {% if create_form.errors %}true{% else %}false{% endif %}
+		$(document).ready(function() {
+			if (formErrors) {
+				$('#createNetworkModal').removeClass('fade');
+				setTimeout(function() {$('#createNetworkModal').addClass('fade');}, 1000);
+				$('#createNetworkModal').modal('show');
+
+			}
+		});
+		
+		$('input[type="text"]').keyup(function() {
+			$(this).removeClass('is-invalid');
+			var textInput = this.value;
+			if (textInput == '{{ create_form.network_name.data }}') {
+				$(this).addClass('is-invalid');
+			};
+			{#$(this).removeClass('is-invalid');#}
+			{#if ($(this).val('{{ create_form.network_name.data }}')) {
+				$(this).addClass('is-invalid');
+			};#}
+		});
+		
+		$('#createNetworkModal').on('hidden.bs.modal', function() {
+			$(this).find('#network-create-form').find('input[type="text"]').val('').end();
+			$(this).find('#network-create-form').find('input[type="text"]').removeClass('is-invalid');
+		});
+
 		{#a$('#accordion-list').on('click', '.list-group-item', function(event) {
 			if($(this).hasClass('active')) {
 				$(this).removeClass('active');
@@ -35,6 +61,7 @@ $('#createNetworkModal').on('hidden.bs.modal', function(e) {
 	document.getElementByTagName('input').reset();
 });#}
 
+{# DO NOT REMOVE
 $(document).ready(function() {
 	console.log('document ready');
 	$('#submit-network').click(function(e) {
@@ -161,37 +188,37 @@ $(document).ready(function() {
 					<button type='button' class='close' data-dismiss='modal'>&times;</button>
 				</div>
 				<div class='modal-body'>
-					<form action='' method='post' id='network-create-form'>
+					<form action='' method='post' id='network-create-form' autocomplete='off'>
 						{{ create_form.hidden_tag() }}
-						{#{% with messages = get_flashed_messages(with_categories=true) %}
-						{% if messages %}
-						{% for category, message in messages %}
-						{% if category == 'error' %}
-						<div class='alert alert-danger' role='alert'>{{ message }}</div>
-						{% endif %}
-						{% endfor%}
-						{% endif %}
-						{% endwith %}#}
+						
+						{{ wtf.render_field(create_form.network_name) }}
+						{#	{{ wtf.render_field(create_form.network_address }} #}
 
-						<p> 
-							{{ create_form.network_name.label }}<br>
-							{{ create_form.network_name }}<br>
-							{% for error in create_form.network_name.errors %}
-							<span style='color: red'>[{{ error }}]</span>
-							{% endfor %}
-						</p>
-						<p> 
-							{{ create_form.network_address.label }}<br>
-							{{ create_form.network_address }}<br>
-							{% for error in create_form.network_address.errors %}
-							<span style='color: red'>[{{ error }}]</span>
-							{% endfor %}
-						</p>
-						<p>
-						{#<input class="submit-button btn btn-success" id="submit" name="submit" type="submit" value="Submit" onclick="submitButton(this)">#}
-						<input id='submit-network' class="submit-button btn btn-success" name="submit" type="submit" value="Submit">
+						<div class='form-group required'>
+							<label for='network_address'>Network Address</label>
+							<div class='input-group'>
+								{% if create_form.network_address.errors %}
+								<input class="form-control is-invalid" id="network_address" name="network_address" required type="text" value='{{ create_form.network_address.data }}'>
+								<div class='input-group-append'>
+									<div class='input-group-text' style='border-top-right-radius:0.3rem !important; border-bottom-right-radius:0.3rem !important;'>/24</div>
+								</div>
+								{% for error in create_form.network_address.errors %}
+								<div class='invalid-feedback'>{{ error }}</div>
+								{% endfor %}
+								
+								
+								{% else %}
+								<input class='form-control' id='network_address' name='network_address' required type='text' value='192.168.0.0'>
+								<div class='input-group-append'>
+									<div class='input-group-text'>/24</div>
+								</div>
+								{% endif %}
+							</div>
+						</div>
 
-						</p>
+						<div class='d-flex justify-content-end'>
+							<input id='submit-network' class="submit-button btn btn-success" name="submit" type="submit" value="Submit" onclick='submitButton(this)'>
+						</div>
 					</form>
 				</div>
 			</div>
