@@ -58,13 +58,14 @@ def list_project_network_details(course):
                 for s in student_networks:
                     child_name = s['name'].split(name, 1)[0].rsplit('-', 1)[0]
                     the_list[name]['children'][child_name] = s
-                    student_subnet_id = s['subnets'][0]
-                    for student_subnet in subnet_list:
-                        if student_subnet_id == student_subnet['id']:
-                            the_list[name]['children'][child_name]['subnets'] = student_subnet
-                    for student_router in router_list:
-                        if child_name in student_router['name'] and name in student_router['name'] and course in student_router['name']:
-                            the_list[name]['children'][child_name]['router'] = student_router
+                    if the_list[name]['children'][child_name].get('subnets'):
+                        student_subnet_id = s['subnets'][0]
+                        for student_subnet in subnet_list:
+                            if student_subnet_id == student_subnet['id']:
+                                the_list[name]['children'][child_name]['subnets'] = student_subnet
+                        for student_router in router_list:
+                            if child_name in student_router['name'] and name in student_router['name'] and course in student_router['name']:
+                                the_list[name]['children'][child_name]['router'] = student_router
             except IndexError: # Subnet creation hasn't completed yet (due to async with celery), so don't let the network display in the table yet
                 the_list[name]['subnets'] = None
     return the_list
@@ -278,51 +279,44 @@ def verify_network_integrity(course, network):
     nt = setup_neutronclient()
     projects = get_projects(course)
     
+    networks = []
+    if network:
+        for name in network:
+            networks.append(name)
+    else:
+        return
+
     problem_children = {}
+    for n in networks:
+        problem_children[n] = {}
 
-    for name in network:
-        network_name = name
-        subnet_ip = network[network_name]['subnets']['cidr']
-        gateway_ip = network[network_name]['subnets']['gateway_ip']
-    
+        subnet_ip = network[n]['subnets']['cidr']
+        gateway_ip = network[n]['subnets']['gateway_ip']
+
         for project in projects['students']:
-            problem_children[project] = {}
+            problem_children[n][project] = {}
+            problem_list = []
 
-            if not project in network[network_name]['children']:
-                problem_children[project] = {'Project': 'Child project not found'}
+            if not network[n]['children'].get(project):
+                problem_list.append('NETWORK_NOT_FOUND')
+
             else:
-                child_network_name = project + '-Network'
-                if not network[network_name]['children'][project]['name'] == child_network_name:
-                    problem_children[project] = {network_name: { 'Network': 'Network not found in child project'}}
+                if not network[n]['children'][project].get('subnets'):
+                    problem_list.append('SUBNET_NOT_FOUND')
                 else:
-                    child_subnet_name = project + '-Subnet'
-                    if not network[network_name]['children'][project]['subnets'] == child_subnet_name:
-                        problem_children[project] = {network_name: {'Subnet': 'Subnet not found in child project'}}
-                        
-        
-            """
-            else:
-                if not 'subnets' in network[network_name]['children'][project]:
-                    problem_children[project]['Subnet'] = 'Subnet not found'
-                else:
-                    if not network[network_name]['children'][project]['subnets']['cidr'] == subnet_ip:
-                        problem_children[project]['CIDR'] = 'Subnet IP is wrong'
-            
-                    if not network[network_name]['children'][project]['subnets']['gateway_ip'] == gateway_ip:
-                        problem_children[project]['Gateway'] = "Gateway IP is wrong"
+                    if not 'cidr' in network[n]['children'][project]['subnets']:
+                        problem_list.append('NO_CIDR_VALUE')
+                    else:
+                        if not network[n]['children'][project]['subnets']['cidr'] == subnet_ip:
+                            problem_list.append('CIDR_IP_WRONG')
 
-                    if not 'router' in network[network_name]['children'][project]:
-                        problem_children[project]['Router'] = "Router doesn't exist"
-            """
+                    if not 'gateway_ip' in network[n]['children'][project]['subnets']:
+                        problem_list.append('NO_GATEWAY_IP_VALUE')
+                    else:
+                        if not network[n]['children'][project]['subnets']['gateway_ip'] == gateway_ip:
+                            problem_list.append('GATEWAY_IP_WRONG')
+                    
+                    if 'router' not in network[n]['children'][project] and network[n]['router']:
+                        problem_list.append('ROUTER_NOT_FOUND')
 
-    print(problem_children)
-
-
-
-
-                
-
-
-        
-        
-
+            problem_children[n][project] = problem_list
