@@ -170,11 +170,18 @@ $(document).ready(function() {
 			{% endfor %}
 		</ul>
 	</div>
-		
+	<div class='row'>
+		<div class='col-md'>
+			<div class='d-flex justify-content-end'>
+				<a href='#validateNetworkModal' class='btn btn-secondary mt-3' data-toggle'modal' data-target='#validateNetworkModal'>Validate Networks</a>
+			</div>
+		</div>
+	</div>
 	{% else %}
 	<p>No networks found for this course.</p>
 	{% endif %}
-	<hr>
+
+
 
 	<div id='createNetworkModal' class='modal fade' role='dialog'>
 		<div class='modal-dialog modal-dialog-centered'>
@@ -220,4 +227,27 @@ $(document).ready(function() {
 			</div>
 		</div>
 	</div>
+
+	<div id='validateNetworkModal' class='modal fade' role='dialog'>
+		<div class='modal-dialog modal-dialog-centered'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h4 class='modal-title'>Validate Networks</h4>
+					<button type='button' class='close' data-dismiss='modal'>&times;</button>
+				</div>
+				<div class='modal-body'>
+					<form action='' method='post' id='validate-network-form'>
+						<div class='form-group required'>
+							<p>Test</p>
+						</div>
+
+						<div class='d-flex justify-content-end'>
+							<input id='submit-validate' class='submit-button btn btn-success' name='submit' type='submit' value='submit' onclick='submitButton(this)'>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</div>
+
 {% endblock %}
