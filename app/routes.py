@@ -3,7 +3,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug import secure_filename
 from werkzeug.urls import url_parse
 from app import app, celery
-from app.forms import LoginForm, UploadForm, QuotaForm, CreateNetworkForm, EditNetworkForm, AcceptDeleteForm
+from app.forms import LoginForm, UploadForm, QuotaForm, CreateNetworkForm, EditNetworkForm, AcceptDeleteForm, CheckNetworkForm
 from . import cache
 from app.models import process_csv, convert_utc_to_eastern
 from app.db_model import Course, Schedule, CourseSchema, ScheduleSchema
@@ -23,6 +23,12 @@ import dateutil.parser
 import pytz
 import calendar
 import json
+
+
+@app.context_processor
+def course_management_utils():
+    return dict(convert_int_to_weekday=convert_int_to_weekday, convert_utc_to_eastern=convert_utc_to_eastern)
+
 
 @app.route('/')
 @login_required
@@ -88,42 +94,49 @@ def course_management():
     from app.forms import create_student_checkbox_list
 
     course_student_list = keystone.get_course_users(current_user.course)
-    form = create_student_checkbox_list(course_student_list)
-    
-    if form.validate_on_submit():
-        if form.reset_password.data is True:
-            for submitted in form:
+    course_form = create_student_checkbox_list(course_student_list)
+    if course_form.validate_on_submit():
+        if course_form.reset_password.data is True:
+            for submitted in course_form:
                 if submitted.data is True and submitted.type == "BooleanField":
                     email.send_password_reset_info.delay(clean_html_tags(str(submitted.label)))
             flash("User password(s) have been reset")
         
-        elif form.designate_as_ta.data is True:
-            for submitted in form:
+        elif course_form.designate_as_ta.data is True:
+            for submitted in course_form:
                 if submitted.data is True and submitted.type == "BooleanField":
                     keystone.set_student_as_ta(clean_html_tags(str(submitted.label)), current_user.course)
             flash("Student has been designated as a course TA")
             return redirect(url_for('course_management'))
         
-        elif form.delete_student.data is True:
+        elif course_form.delete_student.data is True:
             to_delete = {}
-            for submitted in form:
+            for submitted in course_form:
                 if submitted.data is True and submitted.type == "BooleanField":
                     to_delete[clean_html_tags(str(submitted.label))] = clean_html_tags(str(submitted.description))
             session['to_delete'] = to_delete
             return redirect(url_for('delete_students'))
 
-    return render_template('course_management.html', title='Course Management', course_student_list=course_student_list, course=current_user.course, form=form, navbar_text='Course Management: ' + current_user.course)
+    upload_form = UploadForm()
+    if upload_form.validate_on_submit():
+        print(upload_form.file.data)
+
+        #filename = secure_filename(form.file.data.filename)
+        #form.file.data.save('uploads/' + filename)
+        #process_csv(current_user.course, 'uploads/' + filename)
+        #flash('Course list upload in progress')
+        return redirect(url_for('index'))
+
+    return render_template('course_management.html', title='Course Management', 
+            course_student_list=course_student_list, course=current_user.course, 
+            course_form=course_form, upload_form=upload_form, 
+            navbar_text='Course Management: ' + current_user.course)
 
 
 @app.route('/manage/schedule', methods=['GET', 'POST'])
 @login_required
 def schedule_management():
     return render_template('schedule_management.html', title='Schedule Management')
-
-
-@app.context_processor
-def course_management_utils():
-    return dict(convert_int_to_weekday=convert_int_to_weekday, convert_utc_to_eastern=convert_utc_to_eastern)
 
 
 @app.route('/manage/delete', methods=['GET', 'POST'])
@@ -155,7 +168,6 @@ def edit_quota():
     form = QuotaForm()
     if form.validate_on_submit():
         for pid in keystone.get_projects(current_user.course)['students'].values():
-            print(pid)
             nova.update_project_quota.delay(pid, form.instances_quota.data, form.cores_quota.data, \
                      form.ram_quota.data, form.networks_quota.data, form.subnets_quota.data, \
                      form.ports_quota.data, form.fips_quota.data, form.routers_quota.data)
@@ -180,27 +192,35 @@ def edit_quota():
 @login_required
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.course)
-    create_form = CreateNetworkForm()
-    create_form.course_storage.data = current_user.course # Store the course value in the form so the validator can use it
     
-    if create_form.validate_on_submit():
+    create_form = CreateNetworkForm()
+    check_form = CheckNetworkForm()
+    
+    if create_form.create_network.data and create_form.validate_on_submit():
         if not create_form.errors:
             neutron.network_create_wrapper(current_user.project, current_user.course, create_form.network_name.data, create_form.network_address.data)
             flash('Network creation in progress')
             return redirect(url_for('index'))
     
-    return render_template('network.html', title='Networks', networks_list=networks_list, create_form=create_form, navbar_text='Networks: ' + current_user.course)
+    if check_form.check_network.data and check_form.validate_on_submit():
+        problems = neutron.verify_network_integrity(current_user.course, networks_list)
+        fixed = neutron.fix_network_problems(problems, networks_list)
 
+        print(problems)
+        print(fixed)
 
-# DEPRECATED FOR REMOVAL
-#@app.route('/networks/<network_name>_<network_id>', methods=['GET', 'POST'])
-#@login_required
-#def view_network(network_id, network_name):
-#    networks_list = neutron.list_project_network_details(current_user.course)
-#    this_network = networks_list[network_name]
-#    session['this_network'] = this_network
-#
-#    return render_template('view_network.html', title=network_name, this_network=this_network, network_id=network_id, network_name=network_name)
+        flash('Networks have been checked and repaired')
+        return redirect(url_for('network_panel'))
+
+    #delete_form = DeleteNetworkForm()
+    #if delete_form.validate_on_submit():
+
+    #edit_form = EditNetworkForm()
+    #if edit_form.validate_on_submit():
+
+    create_form.course_storage.data = current_user.course # Store the course value in the form so the validator can use it
+
+    return render_template('network.html', title='Networks', networks_list=networks_list, create_form=create_form, check_form=check_form, navbar_text='Networks: ' + current_user.course)
 
 
 @app.route('/networks/<network_name>_<network_id>/edit', methods=['GET', 'POST'])
@@ -250,7 +270,6 @@ def modify_network(network_id, network_name):
 @app.route('/networks/<network_name>_<network_id>/delete', methods=['GET', 'POST'])
 @login_required
 def delete_network(network_id, network_name):
-    #networks_list = session['networks_list']
     this_network = session['this_network']
     try:
         subnet_id = this_network['subnets']['id']
@@ -308,57 +327,9 @@ def image_management():
                         return redirect(url_for('image_management'))
     return render_template('image_management.html', title='Image Management', image_list=image_list, form=form)
 
-def clean_html_tags(html):
-    cleanr = re.compile('<.*?>')
-    cleantext = re.sub(cleanr, '', html)
-    return cleantext
-
-@app.route('/test', methods=['GET', 'POST'])
-@login_required
-def testing():
-    # NOTE: DON'T DELETE THIS
-    #if not Course.query.filter_by(course=current_user.course).first():
-    #c = Course(course=current_user.course, instructor=current_user.id)
-    #db.session.add(c)
-    #db.session.commit()
-    #db_course_id = Course.query.filter_by(course=current_user.course).first().id
-    
-    #time_range = set_datetime_variables(13, 0, 18, 0)
-    #time_range = set_datetime_variables(5, 0, 7, 0)
-    #t = Schedule(weekday=3, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
-    #db.session.add(t)
-    #db.session.commit()
-    # NOTE: DON'T DELETE THIS
-
-#    course_schema = CourseSchema()
-#    schedule_schema = ScheduleSchema()
-#
-#    course_data = Course.query.filter_by(course=current_user.course).first()
-#    course_db_id = Course.query.filter_by(course=current_user.course).first().id
-#
-#    print(course_schema.dump(course_data))
-    #print(course_schema.dump(Course.query.filter_by(course=current_user.course).first()))
-    #print(schedule_schema.dump(Schedule.query.filter_by(course_id=course_db_id)))
-
-   # schedule = Schedule(course_id=current_user.course)
-
-   # print(course_schema.dump(course_s).data)
-   # print(schedule_schema.dump(schedule).data)
-    networks_list = neutron.list_project_network_details(current_user.course)
-    neutron.verify_network_integrity(current_user.course, networks_list)
-    return render_template('testing.html')
 
 
-def set_datetime_variables(start_hour, start_minute, end_hour, end_minute):
-    time_range = {}
-    start_time = time(start_hour, start_minute)
-    end_time = time(end_hour, end_minute)
-    time_range['start'] = start_time
-    time_range['end'] = end_time
-    return time_range
 
-
-#@app.route('/api/schedule', methods=['GET'])
 @app.route('/api/schedule', methods=['GET'])
 @login_required
 def get_schedule():
@@ -392,17 +363,50 @@ def get_schedule():
                         course_dict['editable'] = False
                         course_dict['backgroundColor'] = '#ccc'
                         course_dict['borderColor'] = '#ccc'
-
             schedule_list.append(course_dict)
     return jsonify(schedule_list)
+
+
+#
+# USEFUL FUNCTIONS 
+#
+######################################
+
+def clean_html_tags(html):
+    cleanr = re.compile('<.*?>')
+    cleantext = re.sub(cleanr, '', html)
+    return cleantext
+
+
+def set_datetime_variables(start_hour, start_minute, end_hour, end_minute):
+    time_range = {}
+    start_time = time(start_hour, start_minute)
+    end_time = time(end_hour, end_minute)
+    time_range['start'] = start_time
+    time_range['end'] = end_time
+    return time_range
 
 
 def convert_int_to_weekday(weekday):
     weekday_dict = {0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 4: 'Friday', 5: 'Saturday', 6: 'Sunday'}
     return weekday_dict[weekday]
 
+
 def get_week_dates(today):
     weekday = today.weekday()
     start = today - timedelta(days=weekday)
     return [start + timedelta(days=d) for d in range(7)]
+
+
+#
+# TEST ZONE
+# 
+######################################
+
+@app.route('/test', methods=['GET', 'POST'])
+@login_required
+def testing():
+    networks_list = neutron.list_project_network_details(current_user.course)
+    neutron.verify_network_integrity(current_user.course, networks_list)
+    return render_template('testing.html')
 

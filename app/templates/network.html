@@ -28,6 +28,38 @@
 				$('#createNetworkModal').modal('show');
 
 			}
+
+			{#$.ajaxSetup({
+				beforeSend: function(xhr, settings) {
+					if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+						xhr.setRequestHeader('X-CSRFToken', '{{ create_form.hidden_tag() }}')
+					}
+				}
+			});
+
+			$('#validate-network').click(function(e) {
+				var get_problem_url ='{{ url_for("check_networks") }}'
+				var fix_problem_url ='{{ url_for("fix_networks") }}'
+				$('#validate-network').addClass('stop-interaction disabled');
+				e.preventDefault();
+
+				$.ajax({
+					type: 'get',
+					url: get_problem_url,
+					success: function(request) {
+						console.log(request);
+						$.ajax({
+							type: 'get',
+							url: fix_problem_url,
+							success: function(data) {
+								console.log(data);
+							}
+						});
+					}
+				});
+
+			});#}
+			
 		});
 		
 		$('input[type="text"]').keyup(function() {
@@ -40,8 +72,11 @@
 		
 		$('#createNetworkModal').on('hidden.bs.modal', function() {
 			$(this).find('#network-create-form').find('input[type="text"]').val('').end();
-			$(this).find('#network-create-form').find('input[type="text"]').removeClass('is-invalid');
+			$(this).find('#network-validate-form').find('input[type="text"]').removeClass('is-invalid');
 		});
+
+		
+
 
 		{#a$('#accordion-list').on('click', '.list-group-item', function(event) {
 			if($(this).hasClass('active')) {
@@ -50,56 +85,8 @@
 				$(this).addClass('active').siblings().removeClass('active');
 			}
 		});#}
-{# TODO TODO TODO #}
 
-{# DO NOT REMOVE 
-$('#createNetworkModal').on('hidden.bs.modal', function(e) {
-	document.getElementByTagName('input').reset();
-});#}
-
-{# DO NOT REMOVE
-$(document).ready(function() {
-	console.log('document ready');
-	$('#submit-network').click(function(e) {
-		console.log('inside click func');
-		var url = '{{ url_for("network_create") }}';
 		
-		$.ajax({
-			type: 'post',
-			url: url,
-			data: $('#network-create-form').serialize(),
-			success: function(response) {
-				console.log(response);
-			},
-			error: function(request, status, message) {
-				console.log(status);
-				console.log(message);
-			}
-		});
-
-	e.preventDefault();
-	});
-
-	$.ajaxSetup({
-		beforeSend: function(xhr, settings) {
-			if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-				xhr.setRequestHeader('X-CSRFToken', '{{ create_form.hidden_tag() }}')
-			}
-		}
-	});
-});
-
-{#$('#submit-button').click(function(e) {
-	e.preventDefault();
-	$.post(url, data=$('#submit-button').serialize(), function(data) {
-		if (data.status == 'error') {
-			console.log('error')
-			location.reload();
-		}
-	});
-});#}
-
-	
 	</script>
 {% endblock %}
 
@@ -173,7 +160,7 @@ $(document).ready(function() {
 	<div class='row'>
 		<div class='col-md'>
 			<div class='d-flex justify-content-end'>
-				<a href='#validateNetworkModal' class='btn btn-secondary mt-3' data-toggle'modal' data-target='#validateNetworkModal'>Validate Networks</a>
+				<a href='#validateNetworkModal' class='btn btn-info mt-3' data-toggle='modal' data-target='#validateNetworkModal'>Validate Networks</a>
 			</div>
 		</div>
 	</div>
@@ -220,7 +207,8 @@ $(document).ready(function() {
 						</div>
 
 						<div class='d-flex justify-content-end'>
-							<input id='submit-network' class="submit-button btn btn-success" name="submit" type="submit" value="Submit" onclick='submitButton(this)'>
+							{#<input id='submit-network' class="submit-button btn btn-success" name="submit" type="submit" value="Submit" onclick='submitButton(this)'>#}
+							{{ wtf.render_field(create_form.create_network) }}
 						</div>
 					</form>
 				</div>
@@ -236,13 +224,19 @@ $(document).ready(function() {
 					<button type='button' class='close' data-dismiss='modal'>&times;</button>
 				</div>
 				<div class='modal-body'>
-					<form action='' method='post' id='validate-network-form'>
+					<p>The following networks will have their configurations checked:</p>
+					<ul>
+					{% for name in networks_list %}
+						<li>{{ name }}</li>
+					{% endfor %}
+					</ul>
+					<p>Do you want to continue?</p>
+					<form action='' method='post' id='network-validate-form'>
+						{{ check_form.hidden_tag() }}
 						<div class='form-group required'>
-							<p>Test</p>
-						</div>
-
-						<div class='d-flex justify-content-end'>
-							<input id='submit-validate' class='submit-button btn btn-success' name='submit' type='submit' value='submit' onclick='submitButton(this)'>
+							{#<input id='accept_check' class='submit-button btn btn-success' name='accept_check' type='submit' value='Confirm' onclick='submitButton(this)'>#}
+							{{ wtf.render_field(check_form.check_network) }}
+							<button type="button" class="btn btn-danger" id="btnclose" data-dismiss="modal">Cancel</button>
 						</div>
 					</form>
 				</div>

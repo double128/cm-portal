@@ -1,6 +1,6 @@
 from app import celery
 from celery import group
-from app.keystone_model import get_admin_session, get_projects
+from app.keystone_model import get_admin_session, get_projects, get_project_id
 from app.exceptions import *
 from neutronclient.v2_0 import client as neutronclient
 import re
@@ -289,34 +289,103 @@ def verify_network_integrity(course, network):
     problem_children = {}
     for n in networks:
         problem_children[n] = {}
-
         subnet_ip = network[n]['subnets']['cidr']
         gateway_ip = network[n]['subnets']['gateway_ip']
-
+        
         for project in projects['students']:
             problem_children[n][project] = {}
             problem_list = []
-
             if not network[n]['children'].get(project):
                 problem_list.append('NETWORK_NOT_FOUND')
-
             else:
                 if not network[n]['children'][project].get('subnets'):
                     problem_list.append('SUBNET_NOT_FOUND')
                 else:
                     if not 'cidr' in network[n]['children'][project]['subnets']:
-                        problem_list.append('NO_CIDR_VALUE')
+                        problem_list.append('NO_CIDR_SET')
                     else:
                         if not network[n]['children'][project]['subnets']['cidr'] == subnet_ip:
                             problem_list.append('CIDR_IP_WRONG')
-
                     if not 'gateway_ip' in network[n]['children'][project]['subnets']:
-                        problem_list.append('NO_GATEWAY_IP_VALUE')
+                        problem_list.append('NO_GATEWAY_IP_SET')
                     else:
                         if not network[n]['children'][project]['subnets']['gateway_ip'] == gateway_ip:
                             problem_list.append('GATEWAY_IP_WRONG')
-                    
                     if 'router' not in network[n]['children'][project] and network[n]['router']:
                         problem_list.append('ROUTER_NOT_FOUND')
+            if not problem_list:
+                del problem_children[n][project]
+            else:
+                problem_children[n][project] = problem_list
+    return problem_children
 
-            problem_children[n][project] = problem_list
+def fix_network_problems(problem_children, networks):
+    fixed_networks = {}
+    for network in problem_children:
+        # If there are projects in the dict values (ergo, if problems exist)
+        if any(problem_children[network].values()):
+            fixed_networks[network] = {}
+            # Iterate through the so-called 'problem children', child networks with config issues
+            for project in problem_children[network]:
+                network_name = network
+                project_id = get_project_id(project)
+                instructor_cidr = networks[network_name]['subnets']['cidr']
+                instructor_gateway = networks[network_name]['subnets']['gateway_ip']
+
+                fixed_networks[network][project] = {}
+                fixed = []
+                for problem in problem_children[network][project]:
+                    if problem == 'NETWORK_NOT_FOUND':
+                        # We can assume that if there's no network, then nothing else exists
+                        network_name_full = project + '-' + network_name + '-Network'
+                        network_id = create_network(project_id, network_name_full)
+                        subnet_name = project + '-' + network_name + '-Subnet'
+                        subnet_id = create_subnet(project_id, network_id, subnet_name, instructor_cidr, instructor_gateway)
+
+                        # If internet access is enabled for this network
+                        if networks[network_name]['router']:
+                            router_name = project + '-' + network_name + '-Router'
+                            external_network_id = networks[network_name]['router']['external_gateway_info']['network_id']
+                            create_router(project_id, subnet_id, router_name, external_network_id)
+                        fixed.append('Network "' + network_name + '" created for ' + project)
+                    
+                    if problem == 'SUBNET_NOT_FOUND': 
+                        # If there's no subnet, then there's no CIDR IP, Gateway IP, or Router (if router is enabled)
+                        full_network_name = project + '-' + network_name + '-Network'
+                        network_id = get_network_id(full_network_name)
+                        subnet_name = project + '-' + network_name + '-Subnet'
+                        subnet_id = create_subnet(project_id, network_id, subnet_name, instructor_cidr, instructor_gateway)
+
+                        if networks[network_name]['router']:
+                            router_name = project + '-' + network_name + '-Router'
+                            external_network_id = networks[network_name]['router']['external_gateway_info']['network_id']
+                            create_router(project_id, subnet_id, router_name, external_network_id)
+                        fixed.append('Subnet for "' + network_name + '" created for ' + project)
+                    
+                    if problem == 'NO_CIDR_SET':
+                        pass
+                        #fixed.append('CIDR IP added to "' + network_name + '" for ' + project)
+
+                    if problem == 'CIDR_IP_WRONG': 
+                        pass
+                        #fixed.append('CIDR IP for "' + network_name + '" was corrected for ' + project)
+
+                    if problem == 'NO_GATEWAY_IP_SET':
+                        pass
+                        #fixed.append('Gateway IP added to "' + network_name + '" for ' + project)
+
+                    if problem == 'GATEWAY_IP_WRONG':
+                        pass
+                        #fixed.append('Gateway IP for "' + network_name + '" was corrected for ' + project)
+                    
+                    if problem == 'ROUTER_NOT_FOUND':
+                        pass
+                        #fixed.append('Router for "' + network_name + '" created for ' + project)
+
+                    fixed_networks[network][project] = fixed
+    return fixed_networks
+                
+
+
+
+

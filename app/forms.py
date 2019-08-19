@@ -1,5 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, IntegerField, SubmitField, FileField, SelectField, BooleanField, SelectMultipleField, HiddenField
+from flask_wtf.file import FileField, FileAllowed
+from wtforms import StringField, PasswordField, IntegerField, SubmitField, SelectField, BooleanField, SelectMultipleField, HiddenField
 from wtforms.validators import DataRequired, NumberRange, Length, IPAddress, InputRequired, ValidationError, StopValidation, Regexp
 
 class LoginForm(FlaskForm):
@@ -12,7 +13,7 @@ class LoginForm(FlaskForm):
 
 
 class UploadForm(FlaskForm):
-    file = FileField()
+    file = FileField('file', validators=[FileAllowed(['csv'], '.csv files only!')])
 
 
 class QuotaForm(FlaskForm):
@@ -44,7 +45,7 @@ class CreateNetworkForm(FlaskForm):
     network_name = StringField('Network Name', validators=[InputRequired(), Length(max=32), Regexp('^[A-Za-z0-9\-]+$', message="Network name must only contain alphanumeric characters and hyphens (-).")])
     network_address = StringField('Network Address', validators=[InputRequired()])
     course_storage = StringField()
-    submit = SubmitField('Create Network')
+    create_network = SubmitField('Create Network')
     
     def validate_network_name(form, field):
         from app.neutron_model import setup_neutronclient
@@ -65,6 +66,10 @@ class CreateNetworkForm(FlaskForm):
             raise ValidationError('That is not a valid IP address.')
         except ValueError:
             raise ValidationError('That is not a valid IP address.')
+
+
+class CheckNetworkForm(FlaskForm):
+    check_network = SubmitField('Confirm')
 
 
 class EditNetworkForm(FlaskForm):
