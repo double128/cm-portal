@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileAllowed
+from flask_wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import StringField, PasswordField, IntegerField, SubmitField, SelectField, BooleanField, SelectMultipleField, HiddenField
 from wtforms.validators import DataRequired, NumberRange, Length, IPAddress, InputRequired, ValidationError, StopValidation, Regexp
 
@@ -13,7 +13,8 @@ class LoginForm(FlaskForm):
 
 
 class UploadForm(FlaskForm):
-    file = FileField('file', validators=[FileAllowed(['csv'], '.csv files only!')])
+    file = FileField('file', validators=[FileAllowed(['csv'], '.csv files only!'), FileRequired()])
+    upload = SubmitField('Upload')
 
 
 class QuotaForm(FlaskForm):
@@ -40,6 +41,11 @@ class QuotaForm(FlaskForm):
         self.fips_quota.choices = quota_range
         self.routers_quota.choices = quota_range
 
+
+#
+# NETWORK FORMS 
+#
+#####################################
 
 class CreateNetworkForm(FlaskForm):
     network_name = StringField('Network Name', validators=[InputRequired(), Length(max=32), Regexp('^[A-Za-z0-9\-]+$', message="Network name must only contain alphanumeric characters and hyphens (-).")])
@@ -72,11 +78,15 @@ class CheckNetworkForm(FlaskForm):
     check_network = SubmitField('Confirm')
 
 
+class DeleteNetworkForm(FlaskForm):
+    delete_network = SubmitField('Delete')
+
+
 class EditNetworkForm(FlaskForm):
     dhcp_toggle = BooleanField('DHCP Enabled')
     port_security_toggle = BooleanField('Port Security Enabled')
     internet_access_toggle = BooleanField('Internet Access Enabled')
-    submit = SubmitField('Save Configurations')
+    edit_network = SubmitField('Save Configurations')
 
     def check_if_changed(self, submitted, previous):
         if submitted is not previous:

@@ -3,9 +3,11 @@ from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug import secure_filename
 from werkzeug.urls import url_parse
 from app import app, celery
-from app.forms import LoginForm, UploadForm, QuotaForm, CreateNetworkForm, EditNetworkForm, AcceptDeleteForm, CheckNetworkForm
+#from app.forms import LoginForm, UploadForm, QuotaForm, CreateNetworkForm, EditNetworkForm, AcceptDeleteForm, CheckNetworkForm, DeleteNetworkForm
+import app.forms as forms
 from . import cache
-from app.models import process_csv, convert_utc_to_eastern
+#from app.models import process_csv, convert_utc_to_eastern
+from app.models import convert_utc_to_eastern
 from app.db_model import Course, Schedule, CourseSchema, ScheduleSchema
 from app import db
 from app import keystone_model as keystone
@@ -44,10 +46,9 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
 
-    form = LoginForm()
+    form = forms.LoginForm()
     if form.validate_on_submit():
         osession = keystone.OpenStackUser()
-
         try:
             osession.login(form.username.data, form.password.data, str(form.course.data))
         except keystone.exceptions.http.Unauthorized:
@@ -62,7 +63,6 @@ def login():
         if not next_page or url_parse(next_page).netloc != '':
             next_page = url_for('index')
         return redirect(next_page)
-
     return render_template('login.html', title='Sign In', form=form)
 
 
@@ -73,21 +73,6 @@ def logout():
     return redirect(url_for('login'))
 
 
-@app.route('/upload', methods=['GET', 'POST'])
-@login_required
-def upload():
-    form = UploadForm()
-
-    if form.validate_on_submit():
-        filename = secure_filename(form.file.data.filename)
-        form.file.data.save('uploads/' + filename)
-        process_csv(current_user.course, 'uploads/' + filename)
-        flash('Course list upload in progress')
-        return redirect(url_for('index'))
-
-    return render_template('upload.html', title='Upload', form=form)
-
-
 @app.route('/manage', methods=['GET', 'POST'])
 @login_required
 def course_management():
@@ -95,6 +80,8 @@ def course_management():
 
     course_student_list = keystone.get_course_users(current_user.course)
     course_form = create_student_checkbox_list(course_student_list)
+    upload_form = forms.UploadForm()
+    
     if course_form.validate_on_submit():
         if course_form.reset_password.data is True:
             for submitted in course_form:
@@ -117,14 +104,11 @@ def course_management():
             session['to_delete'] = to_delete
             return redirect(url_for('delete_students'))
 
-    upload_form = UploadForm()
-    if upload_form.validate_on_submit():
-        print(upload_form.file.data)
-
-        #filename = secure_filename(form.file.data.filename)
-        #form.file.data.save('uploads/' + filename)
-        #process_csv(current_user.course, 'uploads/' + filename)
-        #flash('Course list upload in progress')
+    if upload_form.upload.data and upload_form.validate_on_submit():
+        filename = secure_filename(form.file.data.filename)
+        form.file.data.save('uploads/' + filename)
+        process_csv(current_user.course, 'uploads/' + filename)
+        flash('Course list upload in progress')
         return redirect(url_for('index'))
 
     return render_template('course_management.html', title='Course Management', 
@@ -142,7 +126,7 @@ def schedule_management():
 @app.route('/manage/delete', methods=['GET', 'POST'])
 @login_required
 def delete_students():
-    form = AcceptDeleteForm()
+    form = forms.AcceptDeleteForm()
     to_delete = session['to_delete']
 
     if form.validate_on_submit():
@@ -165,7 +149,7 @@ def edit_quota():
     # Get quota details from the first student in the course
     student_quota = nova.get_project_quota(list(keystone.get_projects(current_user.course)['students'].values())[0])
 
-    form = QuotaForm()
+    form = forms.QuotaForm()
     if form.validate_on_submit():
         for pid in keystone.get_projects(current_user.course)['students'].values():
             nova.update_project_quota.delay(pid, form.instances_quota.data, form.cores_quota.data, \
@@ -193,9 +177,12 @@ def edit_quota():
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.course)
     
-    create_form = CreateNetworkForm()
-    check_form = CheckNetworkForm()
-    
+    create_form = forms.CreateNetworkForm()
+    check_form = forms.CheckNetworkForm()
+    delete_form = forms.DeleteNetworkForm()
+    edit_form = forms.EditNetworkForm()
+
+    create_form.course_storage.data = current_user.course # Store the course value in the form so the validator can use it
     if create_form.create_network.data and create_form.validate_on_submit():
         if not create_form.errors:
             neutron.network_create_wrapper(current_user.project, current_user.course, create_form.network_name.data, create_form.network_address.data)
@@ -212,15 +199,17 @@ def network_panel():
         flash('Networks have been checked and repaired')
         return redirect(url_for('network_panel'))
 
-    #delete_form = DeleteNetworkForm()
-    #if delete_form.validate_on_submit():
+    if delete_form.delete_network.data and delete_form.validate_on_submit():
+        pass
 
-    #edit_form = EditNetworkForm()
-    #if edit_form.validate_on_submit():
+    if edit_form.edit_network.data and edit_form.validate_on_submit():
+        pass
 
-    create_form.course_storage.data = current_user.course # Store the course value in the form so the validator can use it
-
-    return render_template('network.html', title='Networks', networks_list=networks_list, create_form=create_form, check_form=check_form, navbar_text='Networks: ' + current_user.course)
+    return render_template('network.html', title='Networks', 
+            networks_list=networks_list, 
+            create_form=create_form, check_form=check_form, 
+            delete_form=delete_form, edit_form=edit_form,
+            navbar_text='Networks: ' + current_user.course)
 
 
 @app.route('/networks/<network_name>_<network_id>/edit', methods=['GET', 'POST'])
@@ -239,7 +228,7 @@ def modify_network(network_id, network_name):
     else:
         prev_internet_access_toggle = False
 
-    form = EditNetworkForm()
+    form = forms.EditNetworkForm()
     if request.method == 'POST':
         if form.validate_on_submit():
             dhcp_toggle_change = form.check_if_changed(form.dhcp_toggle.data, prev_dhcp_toggle)
@@ -277,7 +266,7 @@ def delete_network(network_id, network_name):
         flash("Network create task has not finished yet. Please wait until the network has finished being created before deleting it.")
         return redirect(url_for('network_panel'))
     
-    form = AcceptDeleteForm()
+    form = forms.AcceptDeleteForm()
     
     if form.validate_on_submit():
         if form.accept_delete.data:
@@ -325,7 +314,7 @@ def image_management():
                         glance.download_image(current_user.id, current_user.course, clean_html_tags(str(submitted.label)))
                         flash("A download link will be sent to your email (%s) shortly" % keystone.get_instructor_email(current_user.id))
                         return redirect(url_for('image_management'))
-    return render_template('image_management.html', title='Image Management', image_list=image_list, form=form)
+    return render_template('image_management.html', title='Image Management', image_list=image_list, form=form, navbar_text='Images: ' + current_user.course)
 
 
 
@@ -397,6 +386,18 @@ def get_week_dates(today):
     start = today - timedelta(days=weekday)
     return [start + timedelta(days=d) for d in range(7)]
 
+
+def process_csv(course, file):
+    with open(file, 'r') as filehandle:
+        for line in filehandle:
+            if '@uoit' in line:
+                #try:
+                line = re.sub('\"|\n|\r\n|\r', '', line)
+                username = line.split(',')[4]
+                email = line.split(',')[9]
+                keystone.process_new_users.delay(course, username, email)
+                #except IndexError:
+                #    return render_template("500.html", error="Something is wrong with your .csv file formatting. Please make sure that the file has been formatted correctly before uploading again.")
 
 #
 # TEST ZONE
