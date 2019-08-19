@@ -94,6 +94,19 @@ class EditNetworkForm(FlaskForm):
         else:
             return False
 
+def create_edit_network_list(course_network_list):
+    class MultipleCheckboxField(FlaskForm):
+        pass
+
+    keys = course_network_list.keys()
+    for n, network in enumerate(keys):
+        setattr(MultipleCheckboxField, 'dhcp_toggle_%s' % network, BooleanField(label='DHCP Enabled'))
+        setattr(MultipleCheckboxField, 'port_security_toggle_%s' % network, BooleanField(label='Port Security Enabled'))
+        setattr(MultipleCheckboxField, 'internet_access_toggle_%s' % network, BooleanField(label='Internet Access Enabled'))
+        setattr(MultipleCheckboxField, 'edit_network_%s' % network, SubmitField(label='Save Configurations'))
+
+    return MultipleCheckboxField()
+
 
 class AcceptDeleteForm(FlaskForm):
     accept_delete = SubmitField('Delete')

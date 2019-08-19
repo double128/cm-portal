@@ -9,10 +9,10 @@
 	.list-group-hover .list-group-item:hover {
 	    background-color: #f5f5f5;
 	}
-	.active {
+	{#.active {
 		background-color: #3498DB !important;
 		border-color: #3498DB !important;
-	}
+	}#}
 	</style>
 {% endblock %}
 
@@ -28,40 +28,8 @@
 				$('#createNetworkModal').modal('show');
 
 			}
-
-			{#$.ajaxSetup({
-				beforeSend: function(xhr, settings) {
-					if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-						xhr.setRequestHeader('X-CSRFToken', '{{ create_form.hidden_tag() }}')
-					}
-				}
-			});
-
-			$('#validate-network').click(function(e) {
-				var get_problem_url ='{{ url_for("check_networks") }}'
-				var fix_problem_url ='{{ url_for("fix_networks") }}'
-				$('#validate-network').addClass('stop-interaction disabled');
-				e.preventDefault();
-
-				$.ajax({
-					type: 'get',
-					url: get_problem_url,
-					success: function(request) {
-						console.log(request);
-						$.ajax({
-							type: 'get',
-							url: fix_problem_url,
-							success: function(data) {
-								console.log(data);
-							}
-						});
-					}
-				});
-
-			});#}
-			
 		});
-		
+
 		$('input[type="text"]').keyup(function() {
 			$(this).removeClass('is-invalid');
 			var textInput = this.value;
@@ -75,18 +43,10 @@
 			$(this).find('#network-validate-form').find('input[type="text"]').removeClass('is-invalid');
 		});
 
-		
-
-
-		{#a$('#accordion-list').on('click', '.list-group-item', function(event) {
-			if($(this).hasClass('active')) {
-				$(this).removeClass('active');
-			} else {
-				$(this).addClass('active').siblings().removeClass('active');
-			}
-		});#}
-
-		
+		$('#network-list a').on('click', function(e) {
+			e.preventDefault();
+			$(this).tab('show');
+		});
 	</script>
 {% endblock %}
 
@@ -106,51 +66,111 @@
 			<li class='list-group-item' data-toggle='collapse' data-target='#{{ network }}' class='accordion-toggle'>{{ network }}</li>
 			
 			<div class='collapse' id='{{ network }}'>
-				<div class='card text-center'>
+				
+				{# CARD NAV HEADER #}
+				<div class='card'>
+
 					<div class='card-header'>
-						<ul class='nav nav-pills card-header-pills'>
+						<ul class='nav nav-tabs card-header-tabs' id='network-list' role='tablist'>
 							<li class='nav-item'>
-								<a class='nav-link' data-target='#{{ network }}-view' data-toggle='table'>Information</a>
+								<a href='#{{ network }}-view' class='nav-link active' data-target='#{{ network }}-view' role='tab'>Information</a>
 							</li>
 							<li class='nav-item'>
-								<a class='nav-link' data-target='#{{ network }}-options' data-toggle='table'>Configurations</a>
+								<a href='#{{ network }}-option' class='nav-link' data-target='#{{ network }}-options' role='tab'>Configurations</a>
 							</li>
 						</ul>
 					</div>
-					<div class='card-body'>
-						<table class='table' id='{{ network }}-view'>
-							<tr>
-								<th>Network Name:</th>
-								<td>{{ networks_list[network]['name'] }}</td>
-							</tr>
-							<tr>
-								<th>Subnet Name:</th>
-								<td>{{ networks_list[network]['subnets']['name'] }}</td>
-							</tr>
-							<tr>
-								<th>Subnet CIDR:</th>
-								<td>{{ networks_list[network]['subnets']['cidr'] }}</td>
-							</tr>
-							<tr>
-								<th>Address Pool:</th>
-								<td>{{ networks_list[network]['subnets']['allocation_pools'][0]['start'] }}-{{ networks_list[network]['subnets']['allocation_pools'][0]['end'] }}</td>
-							</tr>
-							<tr>
-								<th>Router Name:</th>
-								<td>{{ networks_list[network]['router']['name'] }}</td>
-							</tr>
-							<tr>
-								<th>Gateway IP:</th>
-								<td>{{ networks_list[network]['subnets']['gateway_ip'] }}</td>
-							</tr>
-						</table>
 
-						<table class='table' id='{{ network }}-options'>
-							<tr>
-								<th>AHHHHHHHHHHHHHHHH</th>
-								<td>I AM DYENNNGGGG</td>
-							</tr>
-						</table>
+					<div class='card-body p-0'>
+						<div class='tab-content'>
+							<div class='tab-pane active' id='{{ network }}-view' role='tabpanel'>
+								<div class='card-text'>
+								<table class='table'>
+									<tr>
+										<th>Network Name:</th>
+										<td>{{ networks_list[network]['name'] }}</td>
+									</tr>
+									<tr>
+										<th>Subnet Name:</th>
+										<td>{{ networks_list[network]['subnets']['name'] }}</td>
+									</tr>
+									<tr>
+										<th>Subnet CIDR:</th>
+										<td>{{ networks_list[network]['subnets']['cidr'] }}</td>
+									</tr>
+									<tr>
+										<th>Address Pool:</th>
+										<td>{{ networks_list[network]['subnets']['allocation_pools'][0]['start'] }}-{{ networks_list[network]['subnets']['allocation_pools'][0]['end'] }}</td>
+									</tr>
+									<tr>
+										<th>Router Name:</th>
+										<td>{{ networks_list[network]['router']['name'] }}</td>
+									</tr>
+									<tr>
+										<th>Gateway IP:</th>
+										<td>{{ networks_list[network]['subnets']['gateway_ip'] }}</td>
+									</tr>
+								</table>
+								</div>
+							</div>
+							
+							<div class='tab-pane' id='{{ network }}-options' role='tabpanel'>
+								<div class='card-text'>
+									<form action='' method='post' id='{{ network }}-edit-form'>
+										{{ edit_form.hidden_tag() }}
+										<table class='table'>
+											<tr>
+												<td>
+													<div class='custom-control custom-switch'>
+														{% if networks_list[network]['subnets']['enable_dhcp'] == true %}
+														<input id='dhcp_toggle_{{ network }}' name='dhcp_toggle_{{ network }}' type='checkbox' class='custom-control-input' checked>
+														{% else %}
+														<input id='dhcp_toggle_{{ network }}' name='dhcp_toggle_{{ network }}' type='checkbox' class='custom-control-input'>
+														{% endif %}
+														<label class='custom-control-label' for='dhcp_toggle_{{ network }}'>
+													</div>
+												</td>
+												<td>
+													Enable DHCP
+												</td>
+											</tr>
+												<td>
+													<div class='custom-control custom-switch'>
+														{% if networks_list[network]['port_security_enabled'] == true %}
+														<input id='port_security_toggle_{{ network }}' name='port_security_toggle_{{ network }}' type='checkbox' class='custom-control-input' checked>
+														{% else %}
+														<input id='port_security_toggle_{{ network }}' name='port_security_toggle_{{ network }}' type='checkbox' class='custom-control-input'>
+														{% endif %}
+														<label class='custom-control-label' for='port_security_toggle_{{ network }}'>
+													</div>
+												</td>
+												<td>
+													Enable Port Security
+												</td>
+											</tr>
+											<tr>
+												<td>
+													<div class='custom-control custom-switch'>
+														{% if networks_list[network]['router'] %}
+														<input id='internet_access_toggle_{{ network }}' name='internet_access_toggle_{{ network }}' type='checkbox' class='custom-control-input' checked>
+														{% else %}
+														<input id='internet_access_toggle_{{ network }}' name='internet_access_toggle_{{ network }}' type='checkbox' class='custom-control-input'>
+														{% endif %}
+														<label class='custom-control-label' for='internet_access_toggle_{{ network }}'>
+													</div>
+												</td>
+												<td>
+													Internet Access Enabled
+												</td>
+											</tr>
+										</table>
+										<div class='d-flex justify-content-end pb-2 pr-2'>
+											<input class="btn btn-success" id="edit_network_{{ network }}" name="edit_network" type="submit" value="Save Configurations">
+										</div>
+									</form>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -167,8 +187,6 @@
 	{% else %}
 	<p>No networks found for this course.</p>
 	{% endif %}
-
-
 
 	<div id='createNetworkModal' class='modal fade' role='dialog'>
 		<div class='modal-dialog modal-dialog-centered'>

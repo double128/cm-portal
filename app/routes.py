@@ -176,11 +176,12 @@ def edit_quota():
 @login_required
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.course)
+    edit_form = forms.create_edit_network_list(networks_list)
     
     create_form = forms.CreateNetworkForm()
     check_form = forms.CheckNetworkForm()
     delete_form = forms.DeleteNetworkForm()
-    edit_form = forms.EditNetworkForm()
+    #edit_form = forms.EditNetworkForm()
 
     create_form.course_storage.data = current_user.course # Store the course value in the form so the validator can use it
     if create_form.create_network.data and create_form.validate_on_submit():
@@ -202,8 +203,12 @@ def network_panel():
     if delete_form.delete_network.data and delete_form.validate_on_submit():
         pass
 
-    if edit_form.edit_network.data and edit_form.validate_on_submit():
-        pass
+    if edit_form.validate_on_submit():
+        print(request.data)
+        print(request.args)
+        print(request.form)
+        print(request.json)
+        print(request.values)
 
     return render_template('network.html', title='Networks', 
             networks_list=networks_list, 
