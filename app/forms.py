@@ -104,6 +104,7 @@ def create_edit_network_list(course_network_list):
         setattr(MultipleCheckboxField, 'port_security_toggle_%s' % network, BooleanField(label='Port Security Enabled'))
         setattr(MultipleCheckboxField, 'internet_access_toggle_%s' % network, BooleanField(label='Internet Access Enabled'))
         setattr(MultipleCheckboxField, 'edit_network_%s' % network, SubmitField(label='Save Configurations'))
+        setattr(MultipleCheckboxField, 'delete_network_%s' % network, SubmitField(label='Delete Network'))
 
     return MultipleCheckboxField()
 

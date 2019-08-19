@@ -176,12 +176,21 @@ def edit_quota():
 @login_required
 def network_panel():
     networks_list = neutron.list_project_network_details(current_user.course)
-    edit_form = forms.create_edit_network_list(networks_list)
     
     create_form = forms.CreateNetworkForm()
     check_form = forms.CheckNetworkForm()
     delete_form = forms.DeleteNetworkForm()
-    #edit_form = forms.EditNetworkForm()
+    edit_form = forms.create_edit_network_list(networks_list)
+
+    previous_values = {}
+    for network in networks_list:
+        prev_dhcp_toggle = networks_list[network]['subnets']['enable_dhcp']
+        prev_port_security_toggle = networks_list[network]['port_security_enabled']
+        if networks_list[network].get('router'):
+            prev_internet_access_toggle = True
+        else:
+            prev_internet_access_toggle = False
+        previous_values[network] = {'dhcp': prev_dhcp_toggle, 'port_security': prev_port_security_toggle, 'internet_access': prev_internet_access_toggle}
 
     create_form.course_storage.data = current_user.course # Store the course value in the form so the validator can use it
     if create_form.create_network.data and create_form.validate_on_submit():
@@ -204,11 +213,43 @@ def network_panel():
         pass
 
     if edit_form.validate_on_submit():
-        print(request.data)
-        print(request.args)
-        print(request.form)
-        print(request.json)
-        print(request.values)
+        for n in networks_list:
+            submit_button = 'edit_network_' + n
+            delete_button = 'delete_network_' + n
+            if submit_button in request.form:
+                new_dhcp_toggle = request.form.get('dhcp_toggle_' + n)
+                if new_dhcp_toggle:
+                    new_dhcp_toggle = True
+                else:
+                    new_dhcp_toggle = False
+                new_ps_toggle = request.form.get('port_security_toggle_' + n)
+                if new_ps_toggle:
+                    new_ps_toggle = True
+                else:
+                    new_ps_toggle = False
+                new_internet_toggle = request.form.get('internet_access_toggle_' + n)
+                if new_internet_toggle:
+                    new_internet_toggle = True
+                else:
+                    new_internet_toggle = False
+
+                dhcp_check = check_if_change(previous_values[n]['dhcp'], new_dhcp_toggle)
+                ps_check = check_if_change(previous_values[n]['port_security'], new_ps_toggle)
+                internet_check = check_if_change(previous_values[n]['internet_access'], new_internet_toggle)
+
+                if dhcp_check is True:
+                    neutron.toggle_network_dhcp(current_user.project, networks_list[n], new_dhcp_toggle)    
+                if ps_check is True:
+                    neutron.toggle_network_port_security(current_user.project, networks_list[n], new_ps_toggle)
+                if internet_check is True:
+                    neutron.toggle_network_internet_access(current_user.project, current_user.course, networks_list[n], n, new_internet_toggle)
+
+                flash('Network configurations are being updated')
+                return redirect(url_for('index'))
+            
+            elif delete_button in request.form:
+
+
 
     return render_template('network.html', title='Networks', 
             networks_list=networks_list, 
@@ -216,6 +257,11 @@ def network_panel():
             delete_form=delete_form, edit_form=edit_form,
             navbar_text='Networks: ' + current_user.course)
 
+def check_if_change(prev, curr):
+    if prev == curr:
+        return False
+    else:
+        return True
 
 @app.route('/networks/<network_name>_<network_id>/edit', methods=['GET', 'POST'])
 @login_required
