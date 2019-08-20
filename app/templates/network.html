@@ -167,6 +167,22 @@
 										<div class='d-flex justify-content-between pb-2 pr-2 pl-2'>
 											<input class="btn btn-success" id="edit_network_{{ network }}" name="edit_network_{{ network }}" type="submit" value="Save Configurations">
 											<a href='#deleteNetworkModal' class='btn btn-danger' id='delete_network_{{ network }}' name='delete_network_{{ network }}' data-toggle='modal' data-target='#deleteNetworkModal'>Delete Network</a>
+											
+											<div id='deleteNetworkModal' class='modal fade' role='dialog'>
+												<div class='modal-dialog modal-dialog-centered'>
+													<div class='modal-content'>
+														<div class='modal-header'>
+															<h4 class='modal-title'>Delete Network</h4>
+														</div>
+														<div class='modal-body'>
+															<p>Are you sure you want to delete this network? This action cannot be undone.</p>
+															<input class='btn btn-danger' id='delete_network_{{ network }}' name='delete_network_{{ network }}' type='submit' value='Delete'>
+															<button type="button" class="btn btn-secondary" id="btnclose" data-dismiss="modal">Cancel</button>
+														</div>
+													</div>
+												</div>
+											</div>
+
 										</div>
 									</form>
 								</div>
@@ -182,6 +198,7 @@
 		<div class='col-md'>
 			<div class='d-flex justify-content-end'>
 				<a href='#validateNetworkModal' class='btn btn-info mt-3' data-toggle='modal' data-target='#validateNetworkModal'>Validate Networks</a>
+
 			</div>
 		</div>
 	</div>

@@ -38,7 +38,8 @@ def index():
     #jobs = inspect()
     #print(jobs.active())
     #return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course), active_jobs=jobs.active(), scheduled_jobs=jobs.scheduled())
-    return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course))
+    return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course),
+            navbar_text = 'Course Overview: ' + current_user.course)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -52,10 +53,10 @@ def login():
         try:
             osession.login(form.username.data, form.password.data, str(form.course.data))
         except keystone.exceptions.http.Unauthorized:
-            flash('Login failed.')
+            flash('Login failed', 'error')
             return redirect(url_for('login'))
         except exceptions.ClassInSession as e:
-            flash(e.message)
+            flash(e.message, 'info')
             return redirect(url_for('login'))
 
         login_user(osession)
@@ -111,13 +112,16 @@ def course_management():
         flash('Course list upload in progress')
         return redirect(url_for('index'))
 
-    return render_template('course_management.html', title='Course Management', 
-            course_student_list=course_student_list, course=current_user.course, 
-            course_form=course_form, upload_form=upload_form, 
+    return render_template('course_management.html', 
+            title='Course Management', 
+            course_student_list=course_student_list, 
+            course=current_user.course, 
+            course_form=course_form, 
+            upload_form=upload_form, 
             navbar_text='Course Management: ' + current_user.course)
 
 
-@app.route('/manage/schedule', methods=['GET', 'POST'])
+@app.route('/schedule', methods=['GET', 'POST'])
 @login_required
 def schedule_management():
     return render_template('schedule_management.html', title='Schedule Management')
@@ -140,7 +144,10 @@ def delete_students():
             session.pop('to_delete')
             return redirect(url_for('course_management'))
 
-    return render_template('delete_students.html', title='Delete Students', form=form, to_delete=to_delete)
+    return render_template('delete_students.html', 
+            title='Delete Students', 
+            form=form, 
+            to_delete=to_delete)
 
 
 @app.route('/manage/edit_quota', methods=['GET', 'POST'])
@@ -169,7 +176,10 @@ def edit_quota():
     form.routers_quota.default = student_quota['router']
     form.process()
 
-    return render_template('edit_quota.html', title='Edit Quota', form=form)
+    return render_template('edit_quota.html', 
+            title='Edit Quota', 
+            form=form,
+            navbar_text='Quota: ' + current_user.course)
 
 
 @app.route('/networks', methods=['GET', 'POST'])
@@ -203,14 +213,8 @@ def network_panel():
         problems = neutron.verify_network_integrity(current_user.course, networks_list)
         fixed = neutron.fix_network_problems(problems, networks_list)
 
-        print(problems)
-        print(fixed)
-
         flash('Networks have been checked and repaired')
         return redirect(url_for('network_panel'))
-
-    if delete_form.delete_network.data and delete_form.validate_on_submit():
-        pass
 
     if edit_form.validate_on_submit():
         for n in networks_list:
@@ -248,8 +252,9 @@ def network_panel():
                 return redirect(url_for('index'))
             
             elif delete_button in request.form:
-
-
+                neutron.network_delete_wrapper(current_user.project, current_user.course, networks_list[n])
+                flash('Network deletion in progress')
+                return redirect(url_for('index'))
 
     return render_template('network.html', title='Networks', 
             networks_list=networks_list, 
@@ -257,81 +262,15 @@ def network_panel():
             delete_form=delete_form, edit_form=edit_form,
             navbar_text='Networks: ' + current_user.course)
 
+
 def check_if_change(prev, curr):
     if prev == curr:
         return False
     else:
         return True
 
-@app.route('/networks/<network_name>_<network_id>/edit', methods=['GET', 'POST'])
-@login_required
-def modify_network(network_id, network_name):
-    this_network = session['this_network']
 
-    network_id = this_network['id']
-    subnet_id = this_network['subnets']['id']
-
-    prev_dhcp_toggle = this_network['subnets']['enable_dhcp']
-    prev_port_security_toggle = this_network['port_security_enabled']
-
-    if this_network['router']:
-        prev_internet_access_toggle = True
-    else:
-        prev_internet_access_toggle = False
-
-    form = forms.EditNetworkForm()
-    if request.method == 'POST':
-        if form.validate_on_submit():
-            dhcp_toggle_change = form.check_if_changed(form.dhcp_toggle.data, prev_dhcp_toggle)
-            ps_toggle_change = form.check_if_changed(form.port_security_toggle.data, prev_port_security_toggle)
-            internet_toggle_change = form.check_if_changed(form.internet_access_toggle.data, prev_internet_access_toggle)
-
-            if dhcp_toggle_change is True:
-                neutron.toggle_network_dhcp(current_user.project, this_network, form.dhcp_toggle.data)
-
-            if ps_toggle_change is True:
-                neutron.toggle_network_port_security(current_user.project, this_network, form.port_security_toggle.data)
-
-            if internet_toggle_change is True:
-                neutron.toggle_network_internet_access(current_user.project, current_user.course, this_network, network_name, form.internet_access_toggle.data)
-
-            flash("Network configurations have been successfully updated")
-            return redirect(url_for('view_network', title=network_name, network_name=network_name, network_id=network_id))
-
-    if request.method == 'GET':
-        form.dhcp_toggle.default = prev_dhcp_toggle
-        form.port_security_toggle.default = prev_port_security_toggle
-        form.internet_access_toggle.default = prev_internet_access_toggle
-        form.process()
-
-    return render_template('modify_network.html', title='Edit ' + network_name, form=form, network_id=network_id, network_name=network_name, this_network=this_network)
-
-
-@app.route('/networks/<network_name>_<network_id>/delete', methods=['GET', 'POST'])
-@login_required
-def delete_network(network_id, network_name):
-    this_network = session['this_network']
-    try:
-        subnet_id = this_network['subnets']['id']
-    except TypeError:
-        flash("Network create task has not finished yet. Please wait until the network has finished being created before deleting it.")
-        return redirect(url_for('network_panel'))
-    
-    form = forms.AcceptDeleteForm()
-    
-    if form.validate_on_submit():
-        if form.accept_delete.data:
-            neutron.network_delete_wrapper(current_user.project, current_user.course, this_network)
-            flash('Network deletion in progress')
-            return redirect(url_for('network_panel'))
-    
-        elif form.cancel.data:
-            return redirect(url_for('view_network', title=network_name, network_id=network_id, network_name=network_name))
-
-    return render_template('delete_network.html', title='Delete ' + network_name, form=form, network_id=network_id, network_name=network_name)
-
-
-@app.route('/manage/images', methods=['GET', 'POST'])
+@app.route('/images', methods=['GET', 'POST'])
 @login_required
 def image_management():
     image_list = glance.list_instructor_images(current_user.project, current_user.course)
@@ -365,10 +304,18 @@ def image_management():
                         glance.download_image(current_user.id, current_user.course, clean_html_tags(str(submitted.label)))
                         flash("A download link will be sent to your email (%s) shortly" % keystone.get_instructor_email(current_user.id))
                         return redirect(url_for('image_management'))
-    return render_template('image_management.html', title='Image Management', image_list=image_list, form=form, navbar_text='Images: ' + current_user.course)
+    
+    return render_template('image_management.html', 
+            title='Image Management', 
+            image_list=image_list, 
+            form=form, 
+            navbar_text='Images: ' + current_user.course)
 
 
-
+#
+# API 
+#
+######################################
 
 @app.route('/api/schedule', methods=['GET'])
 @login_required
@@ -380,7 +327,7 @@ def get_schedule():
         today = date.today()
 
     courses = Course.query.all()
-    result = CourseSchema(many=True).dump(courses).data
+    result = CourseSchema(many=True).dump(courses)
     tz = pytz.timezone('America/Toronto')   
     
     schedule_list = []
@@ -398,7 +345,8 @@ def get_schedule():
                     course_dict['end'] = end.isoformat()
                     
                     if course_dict['instructor'] == current_user.id:
-                        course_dict['editable'] = True # Current user owns this event so let them edit it
+                        #course_dict['editable'] = True # Current user owns this event so let them edit it
+                        course_dict['editable'] = False
                     else:
                         course_dict['editable'] = False
                         course_dict['backgroundColor'] = '#ccc'
@@ -406,6 +354,11 @@ def get_schedule():
             schedule_list.append(course_dict)
     return jsonify(schedule_list)
 
+
+@app.route('/api/cron', methods=['GET'])
+@login_required
+def cron():
+    pass
 
 #
 # USEFUL FUNCTIONS 

@@ -17,13 +17,15 @@
 		<div class='container' style='max-width:800px;padding-top:5rem;'>
 			
 			<div id='login-row' class='justify-content-center align-items-center mt-0'>
-				{% with messages = get_flashed_messages() %}
+				{% with messages = get_flashed_messages(with_categories=true) %}
 				{% if messages %}
-				{% for message in messages %}
-				{% if 'failed' in message %}
-				<div class='alert alert-danger d-flex' role='alert'>{{ message }}</div>
-				{% else %}
+				{% for category, message in messages %}
+				{% if category == 'info' %}
+				<div class='alert alert-info d-flex' role='alert'>{{ message }}</div>
+				{% elif category == 'warning' %}
 				<div class='alert alert-warning d-flex' role='alert'>{{ message }}</div>
+				{% elif category == 'error' %}
+				<div class='alert alert-danger d-flex' role='alert'>{{ message }}</div>
 				{% endif %}
                 	        {% endfor %}
 				{% else %}

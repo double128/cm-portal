@@ -49,7 +49,7 @@ class OpenStackUser(UserMixin):
         login.users[id] = self
     
     def check_if_course_running(self):
-        from app.models import convert_utc_to_eastern
+        from app.models import convert_utc_to_eastern  # Output the time in EST/EDT rather than UTC, which is how time is stored in the DB
         weekday = datetime.datetime.today().weekday()
         current_time = datetime.datetime.utcnow().time()
 
@@ -63,7 +63,7 @@ class OpenStackUser(UserMixin):
             if time.weekday == weekday:
                 if time.start_time < current_time < time.end_time:
                     if hasattr(check, 'id'):
-                        if not time.course_info == check.id:
+                        if not time.course_id == check.id:
                            raise ClassInSession(start_time=convert_utc_to_eastern(time.start_time), end_time=convert_utc_to_eastern(time.end_time), message=None)
                     else:
                        raise ClassInSession(start_time=convert_utc_to_eastern(time.start_time), end_time=convert_utc_to_eastern(time.end_time), message=None)
