@@ -2,7 +2,7 @@ from flask import render_template, flash, redirect, url_for, request, jsonify, s
 from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug import secure_filename
 from werkzeug.urls import url_parse
-from app import app, celery
+from app import app, celery 
 #from app.forms import LoginForm, UploadForm, QuotaForm, CreateNetworkForm, EditNetworkForm, AcceptDeleteForm, CheckNetworkForm, DeleteNetworkForm
 import app.forms as forms
 from . import cache
@@ -25,6 +25,7 @@ import dateutil.parser
 import pytz
 import calendar
 import json
+from celery.schedules import crontab
 
 
 @app.context_processor
@@ -124,7 +125,50 @@ def course_management():
 @app.route('/schedule', methods=['GET', 'POST'])
 @login_required
 def schedule_management():
-    return render_template('schedule_management.html', title='Schedule Management')
+    add_time_form = forms.AddScheduleTimeForm()
+
+    if add_time_form.validate_on_submit():
+        weekday = add_time_form.weekday.data
+        st = add_time_form.start_time.data
+        et = add_time_form.end_time.data
+        
+        # Convert 12 hour strings to 24 hour datetime objects
+        st = datetime.strptime(st, '%I:%M %p')
+        et = datetime.strptime(et, '%I:%M %p')
+
+        tz = pytz.timezone('America/Toronto')
+
+        # Merge today's date with st/et to get proper UTC offset calculations
+        st = datetime.combine(date.today(), st.time())
+        et = datetime.combine(date.today(), et.time())
+
+        # Make our inputs TZ aware
+        st = tz.localize(st)
+        et = tz.localize(et)
+        
+        # Convert to UTC
+        st = st.astimezone(pytz.utc)
+        et = et.astimezone(pytz.utc)
+
+        db_course = Course.query.filter_by(course=current_user.course).first()
+
+        # If this user doesn't have a course entry in the DB, add it
+        if not db_course:
+            new_course = Course(course=current_user.course, instructor=current_user.id)
+            db.session.add(new_course)
+            db.session.commit()
+
+        db_course_id = db_course.id
+        time_range = set_datetime_variables(st.hour, st.minute, et.hour, et.minute)
+        new_time = Schedule(weekday=weekday, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
+        db.session.add(new_time)
+        db.session.commit()
+
+        return redirect(url_for('schedule_management'))
+
+    return render_template('schedule_management.html', 
+            title='Schedule Management',
+            add_time_form=add_time_form)
 
 
 @app.route('/manage/delete', methods=['GET', 'POST'])
@@ -327,7 +371,7 @@ def get_schedule():
         today = date.today()
 
     courses = Course.query.all()
-    result = CourseSchema(many=True).dump(courses)
+    result = CourseSchema(many=True).dump(courses).data
     tz = pytz.timezone('America/Toronto')   
     
     schedule_list = []
@@ -336,6 +380,7 @@ def get_schedule():
             course_dict = {}
             course_dict['title'] = r['course'] + ' Lab Session'
             course_dict['instructor'] = r['instructor']
+            course_dict['course'] = r['course']
             week_dates = get_week_dates(today)
             for w in week_dates:
                 if w.weekday() == t['weekday']:
@@ -357,8 +402,71 @@ def get_schedule():
 
 @app.route('/api/cron', methods=['GET'])
 @login_required
-def cron():
-    pass
+def cron_tasks():
+    # Get current time in EST/EDT in ISO formatting
+    #current_time = datetime.now().astimezone(pytz.timezone('America/Toronto'))
+    course_schedule = get_schedule().json # We can use the function above since it's already parsed nicely
+
+    #test_time = datetime(2019, 8, 20, 13, 0, 0).astimezone(pytz.timezone('America/Toronto'))
+    current_time = datetime(2019, 8, 20, 18, 0, 0).astimezone(pytz.timezone('America/Toronto'))
+    print('CURRENT TIME:')
+    print(current_time)
+
+    for c in course_schedule:
+        course = c['course']
+        start_time = dateutil.parser.parse(c['start'])
+        end_time = dateutil.parser.parse(c['end'])
+    
+        print('')
+        print(course)
+        
+        print(c['title'])
+        print(start_time)
+        print(end_time)
+
+        if start_time.day == current_time.day:
+            
+            # Set variable for COURSE_TIME_BUFFER minutes before and after the course is scheduled
+            course_time_before = start_time - timedelta(minutes=app.config['COURSE_TIME_BUFFER'])
+            course_time_after = end_time + timedelta(minutes=app.config['COURSE_TIME_BUFFER'])
+            
+
+            # Current time is <= COURSE_TIME_BUFFER minutes before the scheduled time
+            if course_time_before <= current_time < start_time:
+                print('[Current time is <= 30 minutes before scheduled time]')
+                # Iterate through student projects for this course and enable them, so long as they aren't enabled already
+
+            
+            # The course is running at this time
+            elif start_time <= current_time <= end_time:
+                print('[Course is currently scheduled for the current time]')
+                
+
+            # Current time is <= COURSE_TIME_BUFFER minutes after the scheduled time
+            elif end_time < current_time <= course_time_after:
+                print('[Current time is <= 30 minutes after scheduled time]')
+                # Disable the student projects, but ONLY if there's no other session scheduled for this course right now or a session coming up in 30 minutes
+                for c2 in course_schedule:
+                    if course in c2['course']:
+                        print('found other schedule for ' + course)
+
+            else:
+                print('[Course is not running anytime soon]')
+                # if $RANDOM_CHOSEN_STUDENT_PROJECT is enabled then:
+                #   disable
+
+        else:
+            print('[Scheduled time is not today]')
+            # if $RANDOM_CHOSEN_STUDENT_PROJECT is enabled then:
+            #   disable
+
+
+    
+    return 'ok'
+
+#@app.before_first_request
+#def setup_periodic_tasks(sender, **kwargs):
+#    sender.add_periodic_task(10.0, test.s('hello'), name='add every 10s')
 
 #
 # USEFUL FUNCTIONS 

@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
-from wtforms import StringField, PasswordField, IntegerField, SubmitField, SelectField, BooleanField, SelectMultipleField, HiddenField
+from wtforms import StringField, PasswordField, IntegerField, SubmitField, SelectField, BooleanField, SelectMultipleField, HiddenField, DateTimeField
 from wtforms.validators import DataRequired, NumberRange, Length, IPAddress, InputRequired, ValidationError, StopValidation, Regexp
 
 class LoginForm(FlaskForm):
@@ -144,6 +144,10 @@ def create_student_checkbox_list(course_student_list):
     return MultipleCheckboxField()
         
 
-#class ImageManagementForm(FlaskForm):
-#    #image_select = SelectMultipleField()
-#    image_select = BooleanField()
+# Create form to store data that can be used to add a new time to the course schedule
+class AddScheduleTimeForm(FlaskForm):
+    #weekday = SelectField('Weekday', choices=[('0', 'Monday'), ('1', 'Tuesday'), ('2', 'Wednesday'), ('3', 'Thursday'), ('4', 'Friday'), ('5', 'Saturday'), ('6', 'Sunday')], validators=[DataRequired()])
+    weekday = SelectField('Weekday', choices=[('0', 'Monday'), ('1', 'Tuesday'), ('2', 'Wednesday'), ('3', 'Thursday'), ('4', 'Friday')], validators=[DataRequired()])
+    start_time = StringField(validators=[DataRequired()])
+    end_time = StringField(validators=[DataRequired()])
+    add_time = SubmitField('Confirm')

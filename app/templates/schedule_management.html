@@ -6,6 +6,8 @@
 	<link href="{{ url_for('static', filename='fullcalendar/packages/timegrid/main.css') }}" rel='stylesheet'/>
 	<link href="{{ url_for('static', filename='fullcalendar/packages/bootstrap/main.css') }}" rel='stylesheet'/>
 
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.0-alpha14/css/tempusdominus-bootstrap-4.min.css" />
+	
 	<style>
 	#modal {
 		display: none;
@@ -33,7 +35,7 @@
 	}
 
 	.fc-today {
-    		background: #f6f8f8 !important;
+				background: #f6f8f8 !important;
 	}
 
 	</style>
@@ -41,97 +43,102 @@
 {% endblock %}
 
 {% block scripts %}
+	{{ super() }}
 	<script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js'></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/core/main.js') }}"></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/daygrid/main.js') }}"></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/timegrid/main.js') }}"></script>
 	<script src="{{ url_for('static', filename='fullcalendar/packages/interaction/main.js') }}"></script>
-	{# <script src="{{ url_for('static', filename='fullcalendar/packages/bootstrap/main.js') }}"></script> #}
 	<script src='{{ url_for('static', filename='bootstrap/fullcalendar.js') }}'></script>
+	
+	{# Bootstrap DateTime Stuff #}
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tempusdominus-bootstrap-4/5.0.0-alpha14/js/tempusdominus-bootstrap-4.min.js"></script>
 
-	<script>
-	document.addEventListener('DOMContentLoaded', function() {
-		var calendarEl = document.getElementById('calendar');
-
-		var calendar = new FullCalendar.Calendar(calendarEl, {
- 			plugins: [ 'interaction', 'dayGrid', 'timeGrid', 'bootstrap' ],
-			header: {
-				left: 'title',
-				center: '',
-				right: 'prev, next, today',
-			},
-			themeSystem: 'bootstrap',
-			defaultView: $(window).width() < 768 ? 'timeGridDay':'timeGridWeek',
-			windowResize: function changeCalendarView() {
-						var ww = $(window).width();
-						var view = (ww <= 768) ? 'timeGridDay':'timeGridWeek';
-						var currentView = calendar.view;
-						if (view != currentView) {
-							calendar.changeView(view);
-						}
-					},
-			defaultDate: moment().format('YYYY-MM-DD'),
-			allDaySlot: false,
-			events: {
-				url: '/api/schedule',
-				failure: function() {
-					document.getElementById('script-warning').style.display = 'block'
-				}
-			},
-			eventOverlap: false,
-			nowIndicator: true,
-			slotDuration: '01:00:00',
-			snapDuration: '00:10:00',
-			height: 'auto',
-			{# firstDay: 0,
-			weekNumberCalculation: 'local', #}
-			loading: function(bool) {
-				$('#loading').toggle(bool);
-			},
-			dateClick: function(info) {
-				alert('Clicked on: ' + info.dateStr);
-			},
-			eventClick: function(info) {
-				if (info.event.durationEditable == true) {
-					$('#modalTitle').html(info.event.title);
-				
-					document.getElementById('modalBody').innerHTML = '';
-					document.getElementById('modalBody').innerHTML += info.event.start
-					document.getElementById('modalBody').innerHTML += info.event.end
-
-					$('#calendarModal').modal();
-				}
-
-			}
-		});
-		calendar.render();
-
-		{#$('. table').addClass('table');
-			$('.fc-head').addClass('thead-light');#}
-
-		{#console.log(document.getElementsByTagName('table').length)
-		console.log($('#calendar table').length)
-			$('#calendar table').removeClass('table-bordered').addClass('table table-bordered')#}
-	});
-	</script>
-{{ super() }}
+	{# Custom scripts #}
+	<script type='text/javascript' src='{{ url_for('static', filename='schedule_management/schedule_management.js') }}'></script>
 {% endblock %}
 	
+
 {% block app_content %}
 <div id='script-warning'>
 	Error getting data from <code>/api/schedule</code> endpoint.
 </div>
+
 <div id='loading'>loading...</div>
+
 <div id='calendar'></div>
 
-<div id='calendarModal' class='modal fade'>
+<div class='d-flex justify-content-end'>
+	<div class='btn-group dropright'>
+		<button type='button' class='btn btn-secondary dropdown-toggle' data-toggle='dropdown'>Scheduling</button>
+		<div class='dropdown-menu'>
+			<a class='dropdown-item' href='#addScheduleTime' id='add_schedule_time' name='add_schedule_time' data-toggle='modal' data-target='#addScheduleTime'>Add Weekly Lab Session</a>
+			<a class='dropdown-item' href='#deleteScheduleTime' id='delete_schedule_time' name='delete_schedule_time' data-toggle='modal' data-target='#deleteScheduleTime'>Remove Lab Session</a>
+		</div>
+	</div>
+</div>
+
+<div id='addScheduleTime' class='modal fade'>
 	<div class='modal-dialog modal-dialog-centered'>
 		<div class='modal-content'>
 			<div class='modal-header'>
-				<h4 id='modalTitle' class='modal-title'></h4>
+				<h4 id='modalTitle' class='modal-title'>Add Weekly Lab Session</h4>
 				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span> <span class="sr-only">close</span></button>
 			</div>
-			<div id='modalBody' class='modal-body'> </div>
+
+			<div id='modalBody' class='modal-body'> 
+				<form action='' method='post' id='addtimeform'>
+					{{ add_time_form.hidden_tag() }}
+
+					<div class='form-group required'>
+						<div class='input-group date' id='starttimepicker' data-target-input='nearest'>
+							<div class='input-group-prepend'>
+								<span class='input-group-text'>Start Time</span>
+							</div>
+							<input class='form-control datetimepicker-input' data-target='#starttimepicker' type='text' id='start_time' name='start_time' required value autocomplete='off'>
+							<div class='input-group-append' data-target='#starttimepicker' data-toggle='datetimepicker'>
+								<div class='input-group-text'><i class='fa fa-clock'></i></div>
+							</div>
+						</div>
+					</div>
+
+					<div class='form-group required'>
+						<div class='input-group date' id='endtimepicker' data-target-input='nearest'>
+							<div class='input-group-prepend'>
+								<span class='input-group-text'>End Time &nbsp;</span>
+							</div>
+							<input class='form-control datetimepicker-input' data-target='#endtimepicker' type='text' id='end_time' name='end_time' required value autocomplete='off'>
+							<div class='input-group-append' data-target='#endtimepicker' data-toggle='datetimepicker'>
+								<div class='input-group-text'><i class='fa fa-clock'></i></div>
+							</div>
+						</div>
+					</div>
+
+					<div class='form-group required'>
+						<div class='input-group'>
+							<div class='input-group-prepend'>
+								<span class='input-group-text'>Weekday &nbsp;</span>
+							</div>
+
+							<select class='custom-select' id='weekday' name='weekday' required>
+								<option value='0'>Monday</option>
+								<option value='1'>Tuesday</option>
+								<option value='2'>Wednesday</option>
+								<option value='3'>Thursday</option>
+								<option value='4'>Friday</option>
+							</select>
+						</div>
+					</div>
+
+					<div class='d-flex justify-content-end'>
+						<div class='form-group required'>
+							{{ wtf.render_field(add_time_form.add_time) }}
+						</div>
+					</div>
+
+				</form>
+			</div>
+
 		</div>
 	</div>
 </div>
