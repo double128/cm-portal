@@ -25,6 +25,7 @@ import dateutil.parser
 import pytz
 import calendar
 import json
+from datetimerange import DateTimeRange
 from celery.schedules import crontab
 
 
@@ -107,8 +108,8 @@ def course_management():
             return redirect(url_for('delete_students'))
 
     if upload_form.upload.data and upload_form.validate_on_submit():
-        filename = secure_filename(form.file.data.filename)
-        form.file.data.save('uploads/' + filename)
+        filename = secure_filename(upload_form.file.data.filename)
+        upload_form.file.data.save('uploads/' + filename)
         process_csv(current_user.course, 'uploads/' + filename)
         flash('Course list upload in progress')
         return redirect(url_for('index'))
@@ -139,20 +140,39 @@ def schedule_management():
 
         tz = pytz.timezone('America/Toronto')
 
-        # Merge today's date with st/et to get proper UTC offset calculations
-        st = datetime.combine(date.today(), st.time())
-        et = datetime.combine(date.today(), et.time())
+        # Merge the date for the day number stored in weekday with the entered time values for proper UTC offset calculations and comparisons
+        week_dates = get_week_dates(date.today())
+        for w in week_dates:
+            if int(w.weekday()) == int(weekday):
+                st = datetime.combine(w, st.time())
+                et = datetime.combine(w, et.time())
 
         # Make our inputs TZ aware
         st = tz.localize(st)
         et = tz.localize(et)
+    
+        time_range = DateTimeRange(st, et)
         
+        # Check if there's another entry at the same time
+        course_schedule = get_schedule().json
+
+        for c in course_schedule:
+            if int(c['weekday']) == int(weekday):
+                c_st = dateutil.parser.parse(c['start'])
+                c_et = dateutil.parser.parse(c['end'])
+                c_time_range = DateTimeRange(c_st, c_et)
+
+                if c_time_range in time_range or time_range in c_time_range or st in c_time_range or st in c_time_range:
+                    msg = 'The time you have entered overlaps with "' + str(c['title']) + '" (' + c_st.strftime('%A') + ' @ ' + c_st.strftime('%I:%M %p') + '-' + c_et.strftime('%I:%M %p') + ').'
+                    flash(msg, 'error')
+                    return redirect(url_for('schedule_management'))
+
         # Convert to UTC
-        st = st.astimezone(pytz.utc)
-        et = et.astimezone(pytz.utc)
+        st_utc = st.astimezone(pytz.utc)
+        et_utc = et.astimezone(pytz.utc)
 
         # If time difference is negative, then the time range is invalid (eg. start time of 9AM can't have an end time of 8AM on the same day)
-        time_diff = et - st
+        time_diff = et_utc - st_utc
         time_diff = time_diff.total_seconds()/3600
         if time_diff < 0:
             flash('Invalid time range for schedule entry (end time cannot be earlier than start time).', 'error')
@@ -161,22 +181,21 @@ def schedule_management():
             flash('Invalid time range for schedule entry (start time cannot be the same as end time).', 'error')
             return redirect(url_for('schedule_management'))
 
-
-        #db_course = Course.query.filter_by(course=current_user.course).first()
+        db_course = Course.query.filter_by(course=current_user.course).first()
 
         # If this user doesn't have a course entry in the DB, add it
-        #if not db_course:
-        #    new_course = Course(course=current_user.course, instructor=current_user.id)
-        #    db.session.add(new_course)
-        #    db.session.commit()
+        if not db_course:
+            new_course = Course(course=current_user.course, instructor=current_user.id)
+            db.session.add(new_course)
+            db.session.commit()
 
-        #db_course_id = db_course.id
-        #time_range = set_datetime_variables(st.hour, st.minute, et.hour, et.minute)
-        #new_time = Schedule(weekday=weekday, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
-        #db.session.add(new_time)
-        #db.session.commit()
-
-        #return redirect(url_for('schedule_management'))
+        db_course_id = db_course.id
+        time_range = set_datetime_variables(st_utc.hour, st_utc.minute, et_utc.hour, et_utc.minute)
+        new_time = Schedule(weekday=weekday, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
+        db.session.add(new_time)
+        db.session.commit()
+        
+        return redirect(url_for('schedule_management'))
 
     if remove_time_form.remove_time.data and remove_time_form.validate_on_submit():
         print('im here')
@@ -388,7 +407,8 @@ def get_schedule():
         today = date.today()
 
     courses = Course.query.all()
-    result = CourseSchema(many=True).dump(courses).data
+    #result = CourseSchema(many=True).dump(courses).data
+    result = CourseSchema(many=True).dump(courses)
     tz = pytz.timezone('America/Toronto')   
     
     schedule_list = []
@@ -405,6 +425,7 @@ def get_schedule():
                     end = pytz.utc.localize(datetime.combine(w, datetime.strptime(t['end_time'], '%H:%M:%S').time()), is_dst=None).astimezone(tz)
                     course_dict['start'] = start.isoformat()
                     course_dict['end'] = end.isoformat()
+                    course_dict['weekday'] = w.weekday()
                     
                     if course_dict['instructor'] == current_user.id:
                         #course_dict['editable'] = True # Current user owns this event so let them edit it

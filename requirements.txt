@@ -30,6 +30,8 @@ colorama==0.4.1
 
 cryptography==2.7
 
+DateTimeRange==0.6.1
+
 debtcollector==1.21.0
 
 decorator==4.4.0
