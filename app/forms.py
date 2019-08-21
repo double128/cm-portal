@@ -151,3 +151,7 @@ class AddScheduleTimeForm(FlaskForm):
     start_time = StringField(validators=[DataRequired()])
     end_time = StringField(validators=[DataRequired()])
     add_time = SubmitField('Confirm')
+
+# Remove times entries from the schedule
+class RemoveScheduleTimeForm(FlaskForm):
+    remove_time = SubmitField('Delete')

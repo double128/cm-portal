@@ -35,8 +35,13 @@
 	}
 
 	.fc-today {
-				background: #f6f8f8 !important;
+		background: #f6f8f8 !important;
 	}
+
+	.dropdown-toggle:after { 
+		content: none;
+	}
+
 
 	</style>
 	{{ super() }}
@@ -66,17 +71,21 @@
 
 <div id='loading'>loading...</div>
 
-<div id='calendar'></div>
-
-<div class='d-flex justify-content-end'>
-	<div class='btn-group dropright'>
-		<button type='button' class='btn btn-secondary dropdown-toggle' data-toggle='dropdown'>Scheduling</button>
+<div class='d-flex justify-content-start mb-0'>
+	<div class='dropdown'>
+		<button type='button' class='btn btn-dark dropdown-toggle' data-toggle='dropdown' style='position:absolute;left:10px;'>
+			<i class="far fa-calendar-plus"></i>
+		</button>
+		
 		<div class='dropdown-menu'>
+			<div class='dropdown-header'>Schedule Options</div>
 			<a class='dropdown-item' href='#addScheduleTime' id='add_schedule_time' name='add_schedule_time' data-toggle='modal' data-target='#addScheduleTime'>Add Weekly Lab Session</a>
 			<a class='dropdown-item' href='#deleteScheduleTime' id='delete_schedule_time' name='delete_schedule_time' data-toggle='modal' data-target='#deleteScheduleTime'>Remove Lab Session</a>
 		</div>
 	</div>
 </div>
+
+<div id='calendar' class='mt-0 pt-0'></div>
 
 <div id='addScheduleTime' class='modal fade'>
 	<div class='modal-dialog modal-dialog-centered'>
@@ -89,7 +98,6 @@
 			<div id='modalBody' class='modal-body'> 
 				<form action='' method='post' id='addtimeform'>
 					{{ add_time_form.hidden_tag() }}
-
 					<div class='form-group required'>
 						<div class='input-group date' id='starttimepicker' data-target-input='nearest'>
 							<div class='input-group-prepend'>
@@ -139,6 +147,22 @@
 				</form>
 			</div>
 
+		</div>
+	</div>
+</div>
+
+<div id='removeScheduleTime' class='modal fade'>
+	<div class='modal-dialog modal-dialog-centered'>
+		<div class='modal-content'>
+			<div class='modal-header'>
+				<h4 id='modalTitle' class='modal-title'>Remove Weekly Lab Session</h4>
+				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span> <span class="sr-only">close</span></button>
+			</div>
+			<div class='modal-body'>
+				<form action='' method='post' id='removetimeform'>
+					{{ remove_time_form.hidden_tag() }}
+				</form>
+			</div>
 		</div>
 	</div>
 </div>

@@ -126,6 +126,7 @@ def course_management():
 @login_required
 def schedule_management():
     add_time_form = forms.AddScheduleTimeForm()
+    remove_time_form = forms.RemoveScheduleTimeForm()
 
     if add_time_form.validate_on_submit():
         weekday = add_time_form.weekday.data
@@ -150,25 +151,41 @@ def schedule_management():
         st = st.astimezone(pytz.utc)
         et = et.astimezone(pytz.utc)
 
-        db_course = Course.query.filter_by(course=current_user.course).first()
+        # If time difference is negative, then the time range is invalid (eg. start time of 9AM can't have an end time of 8AM on the same day)
+        time_diff = et - st
+        time_diff = time_diff.total_seconds()/3600
+        if time_diff < 0:
+            flash('Invalid time range for schedule entry (end time cannot be earlier than start time).', 'error')
+            return redirect(url_for('schedule_management'))
+        elif time_diff == 0:
+            flash('Invalid time range for schedule entry (start time cannot be the same as end time).', 'error')
+            return redirect(url_for('schedule_management'))
+
+
+        #db_course = Course.query.filter_by(course=current_user.course).first()
 
         # If this user doesn't have a course entry in the DB, add it
-        if not db_course:
-            new_course = Course(course=current_user.course, instructor=current_user.id)
-            db.session.add(new_course)
-            db.session.commit()
+        #if not db_course:
+        #    new_course = Course(course=current_user.course, instructor=current_user.id)
+        #    db.session.add(new_course)
+        #    db.session.commit()
 
-        db_course_id = db_course.id
-        time_range = set_datetime_variables(st.hour, st.minute, et.hour, et.minute)
-        new_time = Schedule(weekday=weekday, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
-        db.session.add(new_time)
-        db.session.commit()
+        #db_course_id = db_course.id
+        #time_range = set_datetime_variables(st.hour, st.minute, et.hour, et.minute)
+        #new_time = Schedule(weekday=weekday, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
+        #db.session.add(new_time)
+        #db.session.commit()
 
-        return redirect(url_for('schedule_management'))
+        #return redirect(url_for('schedule_management'))
+
+    if remove_time_form.remove_time.data and remove_time_form.validate_on_submit():
+        print('im here')
 
     return render_template('schedule_management.html', 
             title='Schedule Management',
-            add_time_form=add_time_form)
+            add_time_form=add_time_form,
+            remove_time_form=remove_time_form,
+            navbar_text='Schedule: ' + current_user.course)
 
 
 @app.route('/manage/delete', methods=['GET', 'POST'])
