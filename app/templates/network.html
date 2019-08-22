@@ -5,14 +5,13 @@
 	<link rel='stylesheet' type='text/css' href='{{ url_for('static', filename='network/network.css') }}'/>
 
 	<style>
-	.hiddenRow {padding:0 !important;}
-	.list-group-hover .list-group-item:hover {
-	    background-color: #f5f5f5;
+	[data-toggle='collapse'] .fa:before {
+		content: '\f106';
 	}
-	{#.active {
-		background-color: #3498DB !important;
-		border-color: #3498DB !important;
-	}#}
+
+	[data-toggle='collapse'].collapsed .fa:before {
+		content: '\f107';
+	}
 	</style>
 {% endblock %}
 
@@ -60,12 +59,21 @@
 	</div>
 
 	{% if networks_list %}
-	<div id='accordion'>
+	<div class='accordion'>
 		<ul class='panel list-group' id='accordion-list'>
 			{% for network in networks_list|sort %}
-			<li class='list-group-item' data-toggle='collapse' data-target='#{{ network }}' class='accordion-toggle'>{{ network }}</li>
+			<li class='list-group-item' data-toggle='collapse' data-target='#{{ network }}' class='accordion-toggle'>
+				<div class='d-flex justify-content-between'>
+					<div>
+						{{ network }}
+					</div>
+					<div>
+						<i class="text-secondary fa"></i>
+					</div>
+				</div>
+			</li>
 			
-			<div class='collapse' id='{{ network }}'>
+			<div class='collapse show' id='{{ network }}'>
 				
 				{# CARD NAV HEADER #}
 				<div class='card'>
@@ -262,9 +270,11 @@
 				<div class='modal-body'>
 					<p>The following networks will have their configurations checked:</p>
 					<ul>
+					{% if networks_list %}
 					{% for name in networks_list %}
 						<li>{{ name }}</li>
 					{% endfor %}
+					{% endif %}
 					</ul>
 					<p>Do you want to continue?</p>
 					<form action='' method='post' id='network-validate-form'>

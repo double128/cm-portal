@@ -42,7 +42,6 @@
 		content: none;
 	}
 
-
 	</style>
 	{{ super() }}
 {% endblock %}
@@ -78,9 +77,9 @@
 		</button>
 		
 		<div class='dropdown-menu'>
-			<div class='dropdown-header'>Schedule Options</div>
+			<div class='dropdown-header'>Schedule Menu</div>
 			<a class='dropdown-item' href='#addScheduleTime' id='add_schedule_time' name='add_schedule_time' data-toggle='modal' data-target='#addScheduleTime'>Add Weekly Lab Session</a>
-			<a class='dropdown-item' href='#deleteScheduleTime' id='delete_schedule_time' name='delete_schedule_time' data-toggle='modal' data-target='#deleteScheduleTime'>Remove Lab Session</a>
+			{#<a class='dropdown-item' href='#addWeekendTime' id='add_weekend_time' name='add_weekend_time' data-toggle='modal' data-target='#addWeekendTime'>Add Weekend Session</a>#}
 		</div>
 	</div>
 </div>
@@ -164,21 +163,6 @@
 	</div>
 </div>
 
-{#<div id='removeScheduleTime' class='modal fade'>
-	<div class='modal-dialog modal-dialog-centered'>
-		<div class='modal-content'>
-			<div class='modal-header'>
-				<h4 id='modalTitle' class='modal-title'>Remove Weekly Lab Session</h4>
-				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span> <span class="sr-only">close</span></button>
-			</div>
-			<div class='modal-body'>
-				<form action='' method='post' id='removetimeform'>
-					{{ remove_time_form.hidden_tag() }}
-				</form>
-			</div>
-		</div>
-	</div>
-</div>#}
 
 <div id='viewEventModal' class='modal fade'>
 	<div class='modal-dialog modal-dialog-centered'>
@@ -188,6 +172,22 @@
 				<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">×</span> <span class="sr-only">close</span></button>
 			</div>
 			<div class='modal-body'>
+				<table id='event-info' class='table table-sm mb-0'>
+					<tr>
+						<th>Event Creator:</th>
+						<td><span id='event-creator'></span></td>
+					</tr>
+					<tr>
+						<th>Start Time:</th>
+						<td><span id='event-start-time'></span></td>
+					</tr>
+					<tr>
+						<th>End Time:</th>
+						<td><span id='event-end-time'></span></td>
+					</tr>
+				</table>
+			</div>
+			<div class='modal-footer'>
 				<form action='' method='post' id='eventsettingsform'>
 					{{ remove_time_form.hidden_tag() }}
 					<input class="btn btn-danger" id="remove_time" name="remove_time" type="submit" value="Delete">

@@ -250,11 +250,12 @@ def delete_students():
             to_delete=to_delete)
 
 
-@app.route('/manage/edit_quota', methods=['GET', 'POST'])
+@app.route('/quota', methods=['GET', 'POST'])
 @login_required
 def edit_quota():
     # Get quota details from the first student in the course
     student_quota = nova.get_project_quota(list(keystone.get_projects(current_user.course)['students'].values())[0])
+    print(student_quota)
 
     form = forms.QuotaForm()
     if form.validate_on_submit():
@@ -263,7 +264,7 @@ def edit_quota():
                      form.ram_quota.data, form.networks_quota.data, form.subnets_quota.data, \
                      form.ports_quota.data, form.fips_quota.data, form.routers_quota.data)
         flash('Quota updated')
-        return redirect(url_for('course_management'))
+        return redirect(url_for('index'))
 
     # Make default value equal to whatever's currently set
     form.instances_quota.default = student_quota['instances']
@@ -292,15 +293,16 @@ def network_panel():
     delete_form = forms.DeleteNetworkForm()
     edit_form = forms.create_edit_network_list(networks_list)
 
-    previous_values = {}
-    for network in networks_list:
-        prev_dhcp_toggle = networks_list[network]['subnets']['enable_dhcp']
-        prev_port_security_toggle = networks_list[network]['port_security_enabled']
-        if networks_list[network].get('router'):
-            prev_internet_access_toggle = True
-        else:
-            prev_internet_access_toggle = False
-        previous_values[network] = {'dhcp': prev_dhcp_toggle, 'port_security': prev_port_security_toggle, 'internet_access': prev_internet_access_toggle}
+    if networks_list:
+        previous_values = {}
+        for network in networks_list:
+            prev_dhcp_toggle = networks_list[network]['subnets']['enable_dhcp']
+            prev_port_security_toggle = networks_list[network]['port_security_enabled']
+            if networks_list[network].get('router'):
+                prev_internet_access_toggle = True
+            else:
+                prev_internet_access_toggle = False
+            previous_values[network] = {'dhcp': prev_dhcp_toggle, 'port_security': prev_port_security_toggle, 'internet_access': prev_internet_access_toggle}
 
     create_form.course_storage.data = current_user.course # Store the course value in the form so the validator can use it
     if create_form.create_network.data and create_form.validate_on_submit():
@@ -316,7 +318,8 @@ def network_panel():
         flash('Networks have been checked and repaired')
         return redirect(url_for('network_panel'))
 
-    if edit_form.validate_on_submit():
+    
+    if edit_form and edit_form.validate_on_submit():
         for n in networks_list:
             submit_button = 'edit_network_' + n
             delete_button = 'delete_network_' + n
@@ -413,15 +416,14 @@ def image_management():
 
 
 #
-# API 
+# API
 #
 ######################################
 
-@app.route('/api/reset', methods=['POST'])
+@app.route('/api/reset-d617hd83nvjfer4', methods=['POST'])
 def api_password_reset():
-    if request.form['sender']: 
-        print(request.form['sender'])
-        email.send_password_reset_info.delay(request.form['sender'].lower())
+    if request.form['sender'] and request.form['sender'].split('@')[1] in app.config['EMAIL_DOMAINS']:
+        email.send_password_reset_info.delay(request.form['sender'].lower(), email=True)
         return jsonify({'Result': 'OK'})
     else:
         return jsonify({'Error': 'Invalid Request'})

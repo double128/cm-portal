@@ -31,7 +31,7 @@ def list_project_network_details(course):
             network_names.append(network['name'].split('-', 3)[3].rsplit('-', 1)[0])
     
     if len(network_names) == 0:
-        return False
+        return
 
     for name in network_names:
         instructor_networks = []

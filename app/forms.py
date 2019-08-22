@@ -97,8 +97,14 @@ class EditNetworkForm(FlaskForm):
 def create_edit_network_list(course_network_list):
     class MultipleCheckboxField(FlaskForm):
         pass
+    
+    #if course_
+    if not course_network_list:
+        return
 
     keys = course_network_list.keys()
+
+
     for n, network in enumerate(keys):
         setattr(MultipleCheckboxField, 'dhcp_toggle_%s' % network, BooleanField(label='DHCP Enabled'))
         setattr(MultipleCheckboxField, 'port_security_toggle_%s' % network, BooleanField(label='Port Security Enabled'))

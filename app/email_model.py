@@ -1,14 +1,16 @@
 from app import app, celery
-from app.keystone_model import get_user_email, get_username_from_email, reset_user_password
+from app.keystone_model import get_user_email, get_username_from_email, get_user_id, reset_user_password
 import requests
+import os
+
 
 def send_image_download_link(username, file_name):
     instructor_email = get_user_email(username)
-    email_body = """<pre>
-    ################### THIS IS AN AUTOMATED EMAIL #######################
-    Your image is now available for download <a href="https://cloud.hrl.uoit.ca/%s">here</a>.
-    This download link will only be valid for <b>24 hours</b>.
-    </pre>""" % file_name
+
+    with open('./app/templates/email_templates/image-download.template', 'r') as file:
+        data = file.read()
+
+    email_body = data % file_name
 
     request = requests.post(app.config['MAILGUN_URL'], 
                             auth=('api', app.config['MAILGUN_APIKEY']),
@@ -17,28 +19,27 @@ def send_image_download_link(username, file_name):
                                 'to': instructor_email,
                                 'subject': 'Image Download Request',
                                 'html': email_body})
-    #print('Status: '.format(request.status_code))
-    #print('Body: '.format(request.text))
+
 
 @celery.task(bind=True)
-def send_password_reset_info(self, user):
+def send_password_reset_info(self, username, email=False):
 
-    username = user
-    if '@' in username:
-        username = get_username_from_email(user)
-    if not username:
+    if email:
+        username = get_username_from_email(username)
+
+    if not get_user_id(username):
         return
 
     new_password = reset_user_password(username)
     if not new_password:
-       return
+        return
 
     user_email = get_user_email(username)
-    email_body = """<pre>
-    ################### THIS IS AN AUTOMATED EMAIL #######################
-    Your instructor has requested a password reset for your account, %s.
-    Your password has been reset to <b>%s</b>. Please change it as soon as possible.
-    </pre>""" % (username, new_password)
+
+    with open('./app/templates/email_templates/password-reset.template', 'r') as file:
+        data = file.read()
+
+    email_body = data % (username, new_password)
 
     request = requests.post(app.config['MAILGUN_URL'],
                             auth=('api', app.config['MAILGUN_APIKEY']),
