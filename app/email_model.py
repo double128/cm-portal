@@ -22,13 +22,15 @@ def send_image_download_link(username, file_name):
 
 @celery.task(bind=True)
 def send_password_reset_info(self, username):
-    reset_user_password(username)
+    new_password = reset_user_password(username)
+    if not new_password:
+       return
     user_email = get_user_email(username)
     email_body = """<pre>
     ################### THIS IS AN AUTOMATED EMAIL #######################
     Your instructor has requested a password reset for your account, %s.
-    Your password has been reset to <b>cisco123</b>. Please change it as soon as possible.
-    </pre>""" % username
+    Your password has been reset to <b>%s</b>. Please change it as soon as possible.
+    </pre>""" % (username, new_password)
 
     request = requests.post(app.config['MAILGUN_URL'],
                             auth=('api', app.config['MAILGUN_APIKEY']),

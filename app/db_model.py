@@ -14,8 +14,9 @@ class Schedule(db.Model):
     
     id = db.Column('id', db.Integer, primary_key=True, autoincrement=True)
     weekday = db.Column('weekday', db.Integer, index=True, nullable=False)
-    start_time = db.Column('start_time', db.Time, index=True, nullable=False)
-    end_time = db.Column('end_time', db.Time, index=True, nullable=False)
+    start_time = db.Column('start_time', db.Integer, index=True, nullable=False)
+    end_time = db.Column('end_time', db.Integer, index=True, nullable=False)
+
     course_id = db.Column(db.Integer, db.ForeignKey('course.id'))
 
 

@@ -41,12 +41,17 @@
                                         },
                         defaultDate: moment().format('YYYY-MM-DD'),
                         allDaySlot: false,
+
                         events: {
                                 url: '/api/schedule',
                                 failure: function() {
                                         document.getElementById('script-warning').style.display = 'block'
                                 }
                         },
+
+			eventClick: function(info) {
+				alert('Event ' + info.event.title + ' was clicked');
+			},
 
                         eventOverlap: false,
                         nowIndicator: true,

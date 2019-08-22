@@ -2,7 +2,7 @@ from flask import render_template, flash, redirect, url_for, request, jsonify, s
 from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug import secure_filename
 from werkzeug.urls import url_parse
-from app import app, celery 
+from app import app, celery
 #from app.forms import LoginForm, UploadForm, QuotaForm, CreateNetworkForm, EditNetworkForm, AcceptDeleteForm, CheckNetworkForm, DeleteNetworkForm
 import app.forms as forms
 from . import cache
@@ -92,11 +92,16 @@ def course_management():
                     email.send_password_reset_info.delay(clean_html_tags(str(submitted.label)))
             flash("User password(s) have been reset")
         
-        elif course_form.designate_as_ta.data is True:
+        elif course_form.toggle_ta_status.data is True:
             for submitted in course_form:
                 if submitted.data is True and submitted.type == "BooleanField":
-                    keystone.set_student_as_ta(clean_html_tags(str(submitted.label)), current_user.course)
-            flash("Student has been designated as a course TA")
+                    field_id = clean_html_tags(str(submitted.id))
+                    if 'student' in field_id:
+                        current_role = 'student'
+                    elif 'ta' in field_id:
+                        current_role = 'ta'
+                    keystone.toggle_ta_status(clean_html_tags(str(submitted.label)), current_user.course, current_role)
+            flash("Role(s) have been modified.")
             return redirect(url_for('course_management'))
         
         elif course_form.delete_student.data is True:
@@ -130,50 +135,72 @@ def schedule_management():
     remove_time_form = forms.RemoveScheduleTimeForm()
 
     if add_time_form.validate_on_submit():
+        #db_course = Course.query.filter_by(course=current_user.course).first()
+
+        # If this user doesn't have a course entry in the DB, add it
+        if not Course.query.filter_by(course=current_user.course).first():
+            new_course = Course(course=current_user.course, instructor=current_user.id)
+            db.session.add(new_course)
+            db.session.commit()
+        
+        db_course = Course.query.filter_by(course=current_user.course).first()
+        db_course_id = db_course.id
+        
         weekday = add_time_form.weekday.data
         st = add_time_form.start_time.data
         et = add_time_form.end_time.data
-        
-        # Convert 12 hour strings to 24 hour datetime objects
+
+        # Convert string input to datetime object
         st = datetime.strptime(st, '%I:%M %p')
         et = datetime.strptime(et, '%I:%M %p')
 
-        tz = pytz.timezone('America/Toronto')
-
-        # Merge the date for the day number stored in weekday with the entered time values for proper UTC offset calculations and comparisons
+        # Add associated date with times (for proper UTC calculations)
         week_dates = get_week_dates(date.today())
         for w in week_dates:
             if int(w.weekday()) == int(weekday):
                 st = datetime.combine(w, st.time())
                 et = datetime.combine(w, et.time())
-
-        # Make our inputs TZ aware
+        
+        # Make object TZ-aware
+        tz = pytz.timezone('America/Toronto')
         st = tz.localize(st)
         et = tz.localize(et)
-    
-        time_range = DateTimeRange(st, et)
-        
-        # Check if there's another entry at the same time
-        course_schedule = get_schedule().json
-
-        for c in course_schedule:
-            if int(c['weekday']) == int(weekday):
-                c_st = dateutil.parser.parse(c['start'])
-                c_et = dateutil.parser.parse(c['end'])
-                c_time_range = DateTimeRange(c_st, c_et)
-
-                if c_time_range in time_range or time_range in c_time_range or st in c_time_range or st in c_time_range:
-                    msg = 'The time you have entered overlaps with "' + str(c['title']) + '" (' + c_st.strftime('%A') + ' @ ' + c_st.strftime('%I:%M %p') + '-' + c_et.strftime('%I:%M %p') + ').'
-                    flash(msg, 'error')
-                    return redirect(url_for('schedule_management'))
 
         # Convert to UTC
         st_utc = st.astimezone(pytz.utc)
         et_utc = et.astimezone(pytz.utc)
 
-        # If time difference is negative, then the time range is invalid (eg. start time of 9AM can't have an end time of 8AM on the same day)
-        time_diff = et_utc - st_utc
-        time_diff = time_diff.total_seconds()/3600
+        # Convert to epoch value to store in DB and do comparisons
+        st_utc = st_utc.replace(tzinfo=pytz.utc).timestamp() * 1000
+        et_utc = et_utc.replace(tzinfo=pytz.utc).timestamp() * 1000
+    
+
+        courses = Course.query.all()
+        course_schedule = CourseSchema(many=True).dump(courses)
+
+        for c in course_schedule:
+            for t in c['course_schedule']:
+                if int(t['weekday']) == int(weekday):
+                    c_st = t['start_time']
+                    c_et = t['end_time']
+
+                    if st_utc >= c_st and st_utc <= c_et:
+                        #msg = 'The time you have entered overlaps with "' + str(c['title']) + '" (' + c_st.strftime('%A') + ' @ ' + c_st.strftime('%I:%M %p') + '-' + c_et.strftime('%I:%M %p') + ').'
+                        msg = 'The time you have entered conflicts with an existing entry.'
+                        flash(msg, 'error')
+                        return redirect(url_for('schedule_management'))
+
+                    if et_utc >= c_st and et_utc <= c_et:
+                        msg = 'The time you have entered conflicts with an existing entry.'
+                        flash(msg, 'error')
+                        return redirect(url_for('schedule_management'))
+                    
+                    if st_utc < c_st and et_utc > c_et:
+                        msg = 'The time you have entered conflicts with an existing entry.'
+                        flash(msg, 'error')
+                        return redirect(url_for('schedule_management'))
+        
+        time_diff = et_utc - st_utc 
         if time_diff < 0:
             flash('Invalid time range for schedule entry (end time cannot be earlier than start time).', 'error')
             return redirect(url_for('schedule_management'))
@@ -181,17 +208,7 @@ def schedule_management():
             flash('Invalid time range for schedule entry (start time cannot be the same as end time).', 'error')
             return redirect(url_for('schedule_management'))
 
-        db_course = Course.query.filter_by(course=current_user.course).first()
-
-        # If this user doesn't have a course entry in the DB, add it
-        if not db_course:
-            new_course = Course(course=current_user.course, instructor=current_user.id)
-            db.session.add(new_course)
-            db.session.commit()
-
-        db_course_id = db_course.id
-        time_range = set_datetime_variables(st_utc.hour, st_utc.minute, et_utc.hour, et_utc.minute)
-        new_time = Schedule(weekday=weekday, start_time=time_range['start'], end_time=time_range['end'], course_id=db_course_id)
+        new_time = Schedule(weekday=weekday, start_time=st_utc, end_time=et_utc, course_id=db_course_id)
         db.session.add(new_time)
         db.session.commit()
         
@@ -382,7 +399,7 @@ def image_management():
                 for submitted in form:
                     if submitted.type == "BooleanField" and submitted.data is True:
                         glance.download_image(current_user.id, current_user.course, clean_html_tags(str(submitted.label)))
-                        flash("A download link will be sent to your email (%s) shortly" % keystone.get_instructor_email(current_user.id))
+                        flash("A download link will be sent to your email (%s) shortly" % keystone.get_user_email(current_user.id))
                         return redirect(url_for('image_management'))
     
     return render_template('image_management.html', 
@@ -397,9 +414,25 @@ def image_management():
 #
 ######################################
 
+@app.route('/api/reset', methods=['GET'])
+def api_password_reset():
+   if not request.args.get('token') and not request.args.get('token') == app.config['API_TOKEN']:
+       return jsonify({ 'Error': 'Invalid Token'})
+   if not request.args.get('id'):
+      return jsonify({ 'Error': 'Invalid ID'})
+
+   email.send_password_reset_info.delay(request.args.get('id'))
+   
+   return jsonify({ 'Result': 'Password Reset Successful'})
+
+
+
 @app.route('/api/schedule', methods=['GET'])
-@login_required
-def get_schedule():
+def api_get_schedule():
+
+    #if not request.args.get('token') and not request.args.get('token') == app.config['API_TOKEN']:
+    #   return jsonify({ 'Error': 'Invalid Token'})
+
     # If we get a request from fullcalendar with a date, then set the end date to today
     if request.args.get('start') and request.args.get('end'):
         today = dateutil.parser.parse(request.args.get('end'))
@@ -418,29 +451,44 @@ def get_schedule():
             course_dict['title'] = r['course'] + ' Lab Session'
             course_dict['instructor'] = r['instructor']
             course_dict['course'] = r['course']
+            
             week_dates = get_week_dates(today)
             for w in week_dates:
                 if w.weekday() == t['weekday']:
-                    start = pytz.utc.localize(datetime.combine(w, datetime.strptime(t['start_time'], '%H:%M:%S').time()), is_dst=None).astimezone(tz)
-                    end = pytz.utc.localize(datetime.combine(w, datetime.strptime(t['end_time'], '%H:%M:%S').time()), is_dst=None).astimezone(tz)
+                    start = datetime.fromtimestamp(t['start_time']/1000)
+                    start = pytz.utc.localize(start)
+                    start = start.astimezone(tz)
+                    start = datetime.combine(w, start.time())
+                    end = datetime.fromtimestamp(t['end_time']/1000)
+                    end = pytz.utc.localize(end)
+                    end = end.astimezone(tz)
+                    end = datetime.combine(w, end.time())
+                    
                     course_dict['start'] = start.isoformat()
                     course_dict['end'] = end.isoformat()
                     course_dict['weekday'] = w.weekday()
                     
                     if course_dict['instructor'] == current_user.id:
-                        #course_dict['editable'] = True # Current user owns this event so let them edit it
-                        course_dict['editable'] = False
+                        course_dict['editable'] = True # Current user owns this event so let them edit it
+                        #course_dict['durationEditable'] = False
+                        #course_dict['resourceEditable'] = False
+                        #course_dict['startEditable'] = False
+                        #course_dict['editable'] = False
                     else:
                         course_dict['editable'] = False
                         course_dict['backgroundColor'] = '#ccc'
                         course_dict['borderColor'] = '#ccc'
+
             schedule_list.append(course_dict)
     return jsonify(schedule_list)
 
 
 @app.route('/api/cron', methods=['GET'])
-@login_required
-def cron_tasks():
+def api_cron_tasks():
+
+    #if not request.args.get('token') and not request.args.get('token') == app.config['API_TOKEN']:
+    #   return jsonify({ 'Error': 'Invalid Token'})
+
     # Get current time in EST/EDT in ISO formatting
     #current_time = datetime.now().astimezone(pytz.timezone('America/Toronto'))
     course_schedule = get_schedule().json # We can use the function above since it's already parsed nicely
@@ -463,11 +511,9 @@ def cron_tasks():
         print(end_time)
 
         if start_time.day == current_time.day:
-            
             # Set variable for COURSE_TIME_BUFFER minutes before and after the course is scheduled
             course_time_before = start_time - timedelta(minutes=app.config['COURSE_TIME_BUFFER'])
             course_time_after = end_time + timedelta(minutes=app.config['COURSE_TIME_BUFFER'])
-            
 
             # Current time is <= COURSE_TIME_BUFFER minutes before the scheduled time
             if course_time_before <= current_time < start_time:
@@ -557,7 +603,16 @@ def process_csv(course, file):
 @app.route('/test', methods=['GET', 'POST'])
 @login_required
 def testing():
-    networks_list = neutron.list_project_network_details(current_user.course)
-    neutron.verify_network_integrity(current_user.course, networks_list)
+    #networks_list = neutron.list_project_network_details(current_user.course)
+    #neutron.verify_network_integrity(current_user.course, networks_list)
+
+    #courses = Course.query.all()
+    #result = CourseSchema(many=True).dump(courses)
+    #print(result)
+
+    print(keystone.get_project_role('100222222', 'INFR-1111-Instructors'))
+    print(keystone.get_project_role('1002222221', 'INFR-1111-Instructors'))
+
+
     return render_template('testing.html')
 

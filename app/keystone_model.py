@@ -10,7 +10,10 @@ from app.exceptions import ClassInSession
 import pprint
 import re
 import json
-import datetime 
+import datetime
+import pytz
+import random
+import string
 
 class OpenStackUser(UserMixin):
     id = None
@@ -51,24 +54,28 @@ class OpenStackUser(UserMixin):
     def check_if_course_running(self):
         from app.models import convert_utc_to_eastern  # Output the time in EST/EDT rather than UTC, which is how time is stored in the DB
         weekday = datetime.datetime.today().weekday()
-        current_time = datetime.datetime.utcnow().time()
+        current_time = datetime.datetime.utcnow().timestamp() * 1000
 
         try:
             check = Course.query.filter_by(course=self.course).first()
         except AttributeError:
             check = None
         
+        tz = pytz.timezone('America/Toronto')
         schedule = Schedule.query.all()
-        for time in schedule:
-            if time.weekday == weekday:
-                if time.start_time < current_time < time.end_time:
+        for s in schedule:
+            if s.weekday == weekday:
+                if s.start_time < current_time < s.end_time:
                     if hasattr(check, 'id'):
-                        if not time.course_id == check.id:
-                           raise ClassInSession(start_time=convert_utc_to_eastern(time.start_time), end_time=convert_utc_to_eastern(time.end_time), message=None)
+                        if not s.course_id == check.id:
+                            shitter_start = datetime.datetime.fromtimestamp(s.start_time/1000).astimezone(tz).strftime('%-I:%M %p')
+                            shitter_end = datetime.datetime.fromtimestamp(s.end_time/1000).astimezone(tz).strftime('%-I:%M %p')
+                            raise ClassInSession(start_time=shitter_start, end_time=shitter_end, message=None)
                     else:
-                       raise ClassInSession(start_time=convert_utc_to_eastern(time.start_time), end_time=convert_utc_to_eastern(time.end_time), message=None)
+                        shitter_start = datetime.datetime.fromtimestamp(s.start_time/1000).astimezone(tz).strftime('%-I:%M %p')
+                        shitter_end = datetime.datetime.fromtimestamp(s.end_time/1000).astimezone(tz).strftime('%-I:%M %p')
+                        raise ClassInSession(start_time=shitter_start, end_time=shitter_end, message=None)
 
-        
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
               K    E    Y    S    T    O    N    E
@@ -131,7 +138,10 @@ def get_username_from_id(user_id):
 
 def get_user_id(username):
     ks = get_keystone_session()
-    return utils.find_resource(ks.users, username).id
+    try:
+        return utils.find_resource(ks.users, username).id
+    except:
+        return None
 
 
 def get_user_email(username):
@@ -156,13 +166,26 @@ def get_project_id(project):
     return utils.find_resource(ks.projects, project).id
 
 
-def get_project_role(user_id, project_id):
-    keystone = get_keystone_session()
-    role = keystone.roles.list(user=user_id, project=project_id)
-    if not role or not role[0].name == 'user':
+def get_project_role(username, project):
+    # Check if the user has the 'user' role in a given project
+    ks = get_keystone_session()
+    
+    try:
+        user_id = utils.find_resource(ks.users, username).id
+    except keystoneclient.exceptions.CommandError:
         return False
-    else:
-        return True
+    
+    user_role_id = utils.find_resource(ks.roles, 'user').id
+    project_id = get_project_id(project)
+    role = ks.role_assignments.list(user=user_id, role=user_role_id, project=project_id)
+
+    try:
+        if role[0].scope['project']['id'] == project_id:
+            return True
+        else:
+            return False
+    except IndexError:  # "role" value is returned as empty, meaning user doesn't exist period
+        return False
 
 
 def add_user(username, email):
@@ -201,8 +224,8 @@ def add_role(username, project, course):
     if not uid or not pid:
         return False
     if not get_project_role(uid, pid):
-        keystone = get_keystone_session()
-        result = keystone.roles.grant(user_role_id, user=uid, project=pid)
+        ks = get_keystone_session()
+        result = ks.roles.grant(user_role_id, user=uid, project=pid)
         if not result:
             return False
     return True
@@ -220,9 +243,11 @@ def process_new_users(self, course, username, email):
             return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not create user ' + username}
 
     project = course + '-' + username
-    if project not in projects['students']:
-        if not add_project(project):
-            return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not add user ' + username + ' to project ' + project}
+    instructor_project = list(projects['instructors'].keys())[0]
+    if not get_project_role(username, instructor_project): # Check if the user is a TA (included in the instructor project)
+        if project not in projects['students']:
+            if not add_project(project):
+                return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not add user ' + username + ' to project ' + project}
 
     # We check if the role assignment already exists inside of add_role()
     if not add_role(username, project, course):
@@ -233,26 +258,41 @@ def process_new_users(self, course, username, email):
 
 def reset_user_password(username):
     ks = get_keystone_session()
-    ks.users.update(get_user_id(username), password='cisco123')
+    new_password = ''.join(random.choices(string.ascii_lowercase + string.digits, k=10))
+    try:
+        ks.users.update(get_user_id(username), password=new_password)
+        return new_password
+    except:
+        return None
 
 
-def set_student_as_ta(username, course):
+def toggle_ta_status(username, course, current_role):
     ks = get_keystone_session()
     project_list = get_projects(course)
     instructor_project_id = list(project_list['instructors'].values())[0]
     
-    # Project should exist at all times if the student is not a TA, but we check anyways
-    # FOR REFERENCE: .get() will return "None" if that key does not exist, instead of causing a stack trace, so use it for checks like this plz
-    if project_list['students'].get(course + '-' + username):
-        from app.neutron_model import async_delete_user_networks, list_project_network_details
-        student_project_id = project_list['students'][course + '-' + username]
-        async_delete_user_networks(list_project_network_details(course), course + '-' + username)
-        ks.projects.delete(project_list['students'][course + '-' + username])
-        ks.roles.grant(utils.find_resource(ks.roles, 'user').id, user=get_user_id(username), project=instructor_project_id)
+    if current_role == 'student':
+        # Promote the student to TA status
+        if project_list['students'].get(course + '-' + username):
+            from app.neutron_model import async_delete_user_networks, list_project_network_details
+            student_project_id = project_list['students'][course + '-' + username]
+            async_delete_user_networks.delay(list_project_network_details(course), course + '-' + username)
+            ks.projects.delete(project_list['students'][course + '-' + username])
+            ks.roles.grant(utils.find_resource(ks.roles, 'user').id, user=get_user_id(username), project=instructor_project_id)
+
+    elif current_role == 'ta':
+        # Demote the TA to student status
+        from app.neutron_model import async_create_user_networks, list_project_network_details
+        user_id = get_user_id(username)
+        user_role_id = utils.find_resource(ks.roles, 'user').id
+        ks.roles.revoke(user_role_id, user=user_id, project=instructor_project_id)
+        project_name = course + '-' + username
+        add_project(project_name)
+        ks.roles.grant(user_role_id, user=user_id, project=utils.find_resource(ks.projects, project_name).id)
+        async_create_user_networks.delay(list_project_network_details(course), project_name)
 
 
 def delete_users(to_delete, course):
-    # Just remove their project, networks, subnets, and routers
     ks = get_keystone_session()
     user_list = get_course_users(course)
     user_role_id = utils.find_resource(ks.roles, 'user').id
@@ -265,23 +305,3 @@ def delete_users(to_delete, course):
             from app.neutron_model import async_delete_user_networks, list_project_network_details
             async_delete_user_networks.delay(list_project_network_details(course), to_delete[username])
             ks.projects.delete(project_list['students'][course + '-' + username])
-    
-
-    #role_assignments_list = ks.role_assignments.list(project=list(get_projects(course)['instructors'].values())[0])
-    #project_list = get_projects(course)
-
-    #for username in username_list:
-    #    user_id = get_user_id(username)
-    #    if user_id in [u.user['id'] for u in role_assignments_list]:
-    #        pass
-            #ks.roles.revoke(role=user_role_id, user=user_id, project=list(get_projects(course)['instructors'].values())[0])
-    #    else:
-    #        from app.neutron_model import get_user_networks
-    #        get_user_networks(get_user_id
-            #nt.list_networks(project_id=project_list['students'][course + '-' + username])
-            #print(nt.list_networks)
-
-            #ks.projects.delete(project_list['students'][course + '-' + username])
-
-    
-

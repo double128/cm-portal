@@ -1,18 +1,11 @@
 $(document).ready(function() { 
 	$('input[class*="submit-button"]').addClass('stop-interaction disabled');
 	$("input[type='checkbox']").change(function() {
-		var student_checkbox = $("input[name*='student_']").filter(":checked").length;
-		var ta_checkbox = $("input[name*='ta_']").filter(":checked").length
-
-		if ((student_checkbox == 0) && (ta_checkbox == 0)) {
+		var checkbox = $(this).filter(':checked').length;
+		if (checkbox == 0) {
 			$('input[class*="submit-button"]').addClass("stop-interaction disabled");
-		} else if ((student_checkbox >= 1) && (ta_checkbox == 0)) {
+		} else if (checkbox >= 1) {
 			$('input[class*="submit-button"]').removeClass("stop-interaction disabled");
-		} else if ((student_checkbox >= 1) && (ta_checkbox >= 1)) {
-			$("input[name*='designate_as_ta']").addClass("stop-interaction disabled");
-		} else if ((student_checkbox == 0) && (ta_checkbox >= 1)) {
-			$("input[name*='reset_password']").removeClass("stop-interaction disabled");
-			$("input[name*='delete_student']").removeClass("stop-interaction disabled");
 		}
 	});
 });

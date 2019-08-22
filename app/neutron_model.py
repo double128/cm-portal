@@ -227,6 +227,19 @@ def get_router_id(router_name):
 
 
 @celery.task(bind=True)
+def async_create_user_networks(self, the_cooler_list, user_project):
+    nt = setup_neutronclient()
+    user_project_id = get_project_id(user_project)
+
+    for key in the_cooler_list.keys():
+        user_resource_base_name = user_project + '-' + key
+        user_network_id = create_network(user_project_id, user_resource_base_name + '-Network')
+        user_subnet_id = create_subnet(user_project_id, user_network_id, user_resource_base_name + '-Subnet', the_cooler_list[key]['subnets']['cidr'], the_cooler_list[key]['subnets']['gateway_ip'])
+
+        if the_cooler_list[key]['router']:
+            user_router_id = create_router(user_project_id, user_subnet_id, user_resource_base_name + '-Router', the_cooler_list[key]['router']['external_gateway_info']['network_id'])
+
+@celery.task(bind=True)
 def async_delete_user_networks(self, the_cooler_list, user_project):
     nt = setup_neutronclient()
     for key in the_cooler_list.keys():
@@ -237,7 +250,6 @@ def async_delete_user_networks(self, the_cooler_list, user_project):
                 nt.delete_router(router_id)
         
             nt.delete_network(the_cooler_list[key]['children'][user_project]['id'])
-
 
 def toggle_network_dhcp(project, network, change):
     nt = setup_neutronclient()

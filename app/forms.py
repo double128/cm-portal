@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
-from wtforms import StringField, PasswordField, IntegerField, SubmitField, SelectField, BooleanField, SelectMultipleField, HiddenField, DateTimeField
+from wtforms import StringField, PasswordField, IntegerField, SubmitField, SelectField, BooleanField, SelectMultipleField, HiddenField, DateTimeField, RadioField
 from wtforms.validators import DataRequired, NumberRange, Length, IPAddress, InputRequired, ValidationError, StopValidation, Regexp
 
 class LoginForm(FlaskForm):
@@ -139,7 +139,7 @@ def create_student_checkbox_list(course_student_list):
             setattr(MultipleCheckboxField, 'ta_%d' % s, BooleanField(label=student, description=course_student_list[student]))
 
     setattr(MultipleCheckboxField, 'reset_password', SubmitField('Reset Password'))
-    setattr(MultipleCheckboxField, 'designate_as_ta', SubmitField('Designate Student as TA'))
+    setattr(MultipleCheckboxField, 'toggle_ta_status', SubmitField('Toggle TA Status'))
     setattr(MultipleCheckboxField, 'delete_student', SubmitField('Delete Student'))
     return MultipleCheckboxField()
         
@@ -147,7 +147,8 @@ def create_student_checkbox_list(course_student_list):
 # Create form to store data that can be used to add a new time to the course schedule
 class AddScheduleTimeForm(FlaskForm):
     #weekday = SelectField('Weekday', choices=[('0', 'Monday'), ('1', 'Tuesday'), ('2', 'Wednesday'), ('3', 'Thursday'), ('4', 'Friday'), ('5', 'Saturday'), ('6', 'Sunday')], validators=[DataRequired()])
-    weekday = SelectField('Weekday', choices=[('0', 'Monday'), ('1', 'Tuesday'), ('2', 'Wednesday'), ('3', 'Thursday'), ('4', 'Friday')], validators=[DataRequired()])
+    #weekday = SelectField('Weekday', choices=[('0', 'Monday'), ('1', 'Tuesday'), ('2', 'Wednesday'), ('3', 'Thursday'), ('4', 'Friday')], validators=[DataRequired()])
+    weekday = RadioField('weekday', choices=[('0', 'Monday'), ('1', 'Tuesday'), ('2', 'Wednesday'), ('3', 'Thursday'), ('4', 'Friday')], validators=[DataRequired()])
     start_time = StringField(validators=[DataRequired()])
     end_time = StringField(validators=[DataRequired()])
     add_time = SubmitField('Confirm')
