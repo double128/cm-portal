@@ -1,5 +1,5 @@
 from app import app, celery
-from app.keystone_model import get_user_email, reset_user_password
+from app.keystone_model import get_user_email, get_username_from_email, reset_user_password
 import requests
 
 def send_image_download_link(username, file_name):
@@ -21,10 +21,18 @@ def send_image_download_link(username, file_name):
     #print('Body: '.format(request.text))
 
 @celery.task(bind=True)
-def send_password_reset_info(self, username):
+def send_password_reset_info(self, user):
+
+    username = user
+    if '@' in username:
+        username = get_username_from_email(user)
+    if not username:
+        return
+
     new_password = reset_user_password(username)
     if not new_password:
        return
+
     user_email = get_user_email(username)
     email_body = """<pre>
     ################### THIS IS AN AUTOMATED EMAIL #######################

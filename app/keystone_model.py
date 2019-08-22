@@ -130,11 +130,10 @@ def get_course_users(course):
                         user_dict[user.name] = instructor_project_name
     return dict(sorted(user_dict.items())) # Return list alphabetically
 
-        
+
 def get_username_from_id(user_id):
     ks = get_keystone_session()
     return utils.find_resource(ks.users, user_id).name
-
 
 def get_user_id(username):
     ks = get_keystone_session()
@@ -147,6 +146,14 @@ def get_user_id(username):
 def get_user_email(username):
     ks = get_keystone_session()
     return utils.find_resource(ks.users, username).email
+
+
+def get_username_from_email(email):
+    ks = get_keystone_session()
+    for k in ks.users.list():
+        if k.email == email:
+            return k.name
+    return None
 
 
 def get_projects(course):

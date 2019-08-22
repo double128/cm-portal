@@ -13,12 +13,11 @@ from flask_bootstrap import Bootstrap
 
 app = Flask(__name__)
 app.config.from_object(Config)
-#sqlalchemy_exc = exc
 session = Session(app)
 login = LoginManager(app)
 login.login_view = 'login'
 login.users = {}
-csrf = CSRFProtect(app)
+#csrf = CSRFProtect(app)
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)

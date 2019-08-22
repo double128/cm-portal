@@ -155,4 +155,5 @@ class AddScheduleTimeForm(FlaskForm):
 
 # Remove times entries from the schedule
 class RemoveScheduleTimeForm(FlaskForm):
+    time_to_remove = HiddenField()
     remove_time = SubmitField('Delete')

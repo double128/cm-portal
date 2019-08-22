@@ -174,7 +174,6 @@ def schedule_management():
         st_utc = st_utc.replace(tzinfo=pytz.utc).timestamp() * 1000
         et_utc = et_utc.replace(tzinfo=pytz.utc).timestamp() * 1000
     
-
         courses = Course.query.all()
         course_schedule = CourseSchema(many=True).dump(courses)
 
@@ -215,7 +214,11 @@ def schedule_management():
         return redirect(url_for('schedule_management'))
 
     if remove_time_form.remove_time.data and remove_time_form.validate_on_submit():
-        print('im here')
+        event_id = remove_time_form.time_to_remove.data
+        entry = Schedule.query.get(event_id)
+        db.session.delete(entry)
+        db.session.commit()
+
 
     return render_template('schedule_management.html', 
             title='Schedule Management',
@@ -414,17 +417,14 @@ def image_management():
 #
 ######################################
 
-@app.route('/api/reset', methods=['GET'])
+@app.route('/api/reset', methods=['POST'])
 def api_password_reset():
-   if not request.args.get('token') and not request.args.get('token') == app.config['API_TOKEN']:
-       return jsonify({ 'Error': 'Invalid Token'})
-   if not request.args.get('id'):
-      return jsonify({ 'Error': 'Invalid ID'})
-
-   email.send_password_reset_info.delay(request.args.get('id'))
-   
-   return jsonify({ 'Result': 'Password Reset Successful'})
-
+    if request.form['sender']: 
+        print(request.form['sender'])
+        email.send_password_reset_info.delay(request.form['sender'].lower())
+        return jsonify({'Result': 'OK'})
+    else:
+        return jsonify({'Error': 'Invalid Request'})
 
 
 @app.route('/api/schedule', methods=['GET'])
@@ -467,13 +467,16 @@ def api_get_schedule():
                     course_dict['start'] = start.isoformat()
                     course_dict['end'] = end.isoformat()
                     course_dict['weekday'] = w.weekday()
+                    course_dict['event_id'] = t['id']
                     
                     if course_dict['instructor'] == current_user.id:
-                        course_dict['editable'] = True # Current user owns this event so let them edit it
+                        #course_dict['editable'] = True # Current user owns this event so let them edit it
+                        #course_dict['startEditable'] = False
+                        #course_dict['durationEditable'] = False
                         #course_dict['durationEditable'] = False
                         #course_dict['resourceEditable'] = False
                         #course_dict['startEditable'] = False
-                        #course_dict['editable'] = False
+                        course_dict['editable'] = False
                     else:
                         course_dict['editable'] = False
                         course_dict['backgroundColor'] = '#ccc'
@@ -609,10 +612,6 @@ def testing():
     #courses = Course.query.all()
     #result = CourseSchema(many=True).dump(courses)
     #print(result)
-
-    print(keystone.get_project_role('100222222', 'INFR-1111-Instructors'))
-    print(keystone.get_project_role('1002222221', 'INFR-1111-Instructors'))
-
 
     return render_template('testing.html')
 

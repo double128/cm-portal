@@ -50,7 +50,16 @@
                         },
 
 			eventClick: function(info) {
-				alert('Event ' + info.event.title + ' was clicked');
+				$('#view-event-modal-title').html(info.event.title);
+				var event_id = info.event._def.extendedProps.event_id;
+
+				console.log($('#time_to_remove').val());
+				$('#time_to_remove').attr('value', event_id);
+
+				//if ($('#time_to_remove').value == 0) {
+				//	console.log('empty')
+				//};
+				$('#viewEventModal').modal();
 			},
 
                         eventOverlap: false,
