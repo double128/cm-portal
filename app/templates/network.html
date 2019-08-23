@@ -202,16 +202,19 @@
 			{% endfor %}
 		</ul>
 	</div>
+
 	<div class='row'>
 		<div class='col-md'>
 			<div class='d-flex justify-content-end'>
 				<a href='#validateNetworkModal' class='btn btn-info mt-3' data-toggle='modal' data-target='#validateNetworkModal'>Validate Networks</a>
-
 			</div>
 		</div>
 	</div>
+
 	{% else %}
-	<p>No networks found for this course.</p>
+	<div class='d-flex justify-content-center'>
+	<span class='text-secondary'>No networks found for this course.</span>
+	</div>
 	{% endif %}
 
 	<div id='createNetworkModal' class='modal fade' role='dialog'>
@@ -221,13 +224,13 @@
 					<h4 class='modal-title'>Create Network</h4>
 					<button type='button' class='close' data-dismiss='modal'>&times;</button>
 				</div>
-				<div class='modal-body'>
-					<form action='' method='post' id='network-create-form' autocomplete='off'>
+				
+				<form action='' method='post' id='network-create-form' autocomplete='off'>
+					<div class='modal-body'>
 						{{ create_form.hidden_tag() }}
 						
 						{{ wtf.render_field(create_form.network_name) }}
-						{#	{{ wtf.render_field(create_form.network_address }} #}
-
+						
 						<div class='form-group required'>
 							<label for='network_address'>Network Address</label>
 							<div class='input-group'>
@@ -240,7 +243,6 @@
 								<div class='invalid-feedback'>{{ error }}</div>
 								{% endfor %}
 								
-								
 								{% else %}
 								<input class='form-control' id='network_address' name='network_address' required type='text' value='192.168.0.0'>
 								<div class='input-group-append'>
@@ -249,13 +251,14 @@
 								{% endif %}
 							</div>
 						</div>
-
+						
+					</div>
+					<div class='modal-footer'>
 						<div class='d-flex justify-content-end'>
-							{#<input id='submit-network' class="submit-button btn btn-success" name="submit" type="submit" value="Submit" onclick='submitButton(this)'>#}
-							{{ wtf.render_field(create_form.create_network) }}
+							<input class='submit-button btn btn-success' id='create_network' name='create_network' type='submit' value='Create Network' onclick='submitButton(this)'>
 						</div>
-					</form>
-				</div>
+					</div>
+				</form>
 			</div>
 		</div>
 	</div>
@@ -280,9 +283,8 @@
 					<form action='' method='post' id='network-validate-form'>
 						{{ check_form.hidden_tag() }}
 						<div class='form-group required'>
-							{#<input id='accept_check' class='submit-button btn btn-success' name='accept_check' type='submit' value='Confirm' onclick='submitButton(this)'>#}
-							{{ wtf.render_field(check_form.check_network) }}
-							<button type="button" class="btn btn-danger" id="btnclose" data-dismiss="modal">Cancel</button>
+							<input class="submit-button btn btn-success" id="check_network" name="check_network" type="submit" value="Confirm" onclick="submitButton(this)">
+							<button type="button" class="btn btn-secondary" id="btnclose" data-dismiss="modal">Cancel</button>
 						</div>
 					</form>
 				</div>
@@ -298,8 +300,7 @@
 				</div>
 				<div class='modal-body'>
 					<p>Are you sure you want to delete this network? This action cannot be undone.</p>
-					{# TODO: Get current network var to pass into {{ network }} #}
-					<input class='btn btn-danger' id='delete_network_{{ network }}' name='delete_network_{{ network }}' type='submit' value='Delete'>
+					<input class='submit-button btn btn-danger' id='delete_network_{{ network }}' name='delete_network_{{ network }}' type='submit' value='Delete' onclick='submitButton(this)'>
 					<button type="button" class="btn btn-secondary" id="btnclose" data-dismiss="modal">Cancel</button>
 				</div>
 			</div>

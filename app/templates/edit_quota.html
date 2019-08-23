@@ -3,84 +3,25 @@
 {% block scripts %}
 	{{ super() }}
 	<script type='text/javascript' src='{{ url_for('static', filename='edit_quota/edit_quota.js') }}'></script>
-	{#<script type='text/javascript' src='{{ url_for('static', filename='bootstrap-slider/bootstrap-slider.min.js') }}'></script>#}
-
-	{#<script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.6.2/bootstrap-slider.js'></script>#}
-	<script>
-		$(document).ready(function() {
-			$('#instances b').html($('instances_quota').val());
-			$('#instances_quota').change(function() {
-				$('#instances b').html($(this).val());
-			});
-		});
-
-		$(function () {
-  			$('[data-toggle="tooltip"]').tooltip()
-			{#var isDragging = false;
-			var r = document.getElementById('instances_quota');
-			var min = r.getAttribute('min');
-			var max = r.getAttribute('max');
-			var w = r.clientWidth;
-
-			var moveTip = (function(e) {
-				if (isDragging) {
-					var posPerc = (r.value/max) * 100;
-					var pixPos = (posPerc/100) * w;
-					pixPos += r.offsetLeft;
-
-                        		$('[data-toggle="tooltip"]').tooltip('show');
-
-					document.getElementById('tooltip').style.display = 'block';
-     					document.getElementById('tooltip').style.left = pixPos +'px';
-				}
-			});
-			
-			r.onmousedown = (function(e){
-       				isDragging = true;
-        			r.addEventListener('mousemove', moveTip, false);
-			});
-
-			r.onmouseup = (function(e){
-				isDragging = false;
-    				r.removeEventListener('mousemove',moveTip);
-     				document.getElementById('tooltip').style.display = 'none';
-			});#}
-		});
-	</script>
 {% endblock %}
 
 {% block styles %}
 	{{ super() }}
 	<link rel='stylesheet' type='text/css' href='{{ url_for('static', filename='edit_quota/edit_quota.css') }}'/>
-	{#<link rel='stylesheet' type='text/css' href='{{ url_for('static', filename='bootstrap-slider/bootstrap-slider.min.css') }}'/>#}
-	{#<link rel='stylesheet' type='text/css' href='https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/10.6.2/css/bootstrap-slider.css'>#}
-
-<style>
-	#tooltip {
-    		position:absolute;
-   		border:1px solid black;
-    		padding:4px;
-	}
-</style>
 {% endblock %}
 
 {% block app_content %}
     <form action="" method="post" id="form">
         {{ form.hidden_tag() }}
 	
-	<div class='d-flex justify-content-center'>
-		<input type='range' class='custom-range' id='instances_quota' name='instances_quota' min='0' max='10' value='{{ form.instances_quota.default }}' data-toggle='tooltip' data-placement='top'>
-	</div>
-	<div id='tooltip' data-toggle='tooltip' data-placement='top' title='test'></div>
-
-	{#{{ wtf.render_field(form.instances_quota) }}
+	{{ wtf.render_field(form.instances_quota) }}
 	{{ wtf.render_field(form.cores_quota) }}
 	{{ wtf.render_field(form.ram_quota) }}
 	{{ wtf.render_field(form.networks_quota) }}
 	{{ wtf.render_field(form.subnets_quota) }}
 	{{ wtf.render_field(form.ports_quota) }}
 	{{ wtf.render_field(form.fips_quota) }}
-	{{ wtf.render_field(form.routers_quota) }}#}
+	{{ wtf.render_field(form.routers_quota) }}
 
 	<input class="submit-button btn btn-success" id="submit" name="submit" type="submit" value="Update Quota" onclick="submitButton(this)">
     </form>
