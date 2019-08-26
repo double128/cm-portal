@@ -22,7 +22,7 @@ def send_image_download_link(username, file_name):
 
 
 @celery.task(bind=True)
-def send_password_reset_info(self, username, email=False):
+def send_password_reset_info(self, username, email=False, keep_password=False):
 
     if email:
         username = get_username_from_email(username)
@@ -30,9 +30,12 @@ def send_password_reset_info(self, username, email=False):
     if not get_user_id(username):
         return
 
-    new_password = reset_user_password(username)
-    if not new_password:
-        return
+    if keep_password:
+        new_password = '[See Registration Email]'
+    else:
+        new_password = reset_user_password(username)
+        if not new_password:
+            return
 
     user_email = get_user_email(username)
 
@@ -47,4 +50,42 @@ def send_password_reset_info(self, username, email=False):
                                 'from': 'Cloudbot <cloudbot@hrl.uoit.ca>',
                                 'to': user_email,
                                 'subject': 'Cloud Password Reset',
+                                'html': email_body})
+
+
+@celery.task(bind=True)
+def send_new_course_info(self, username, course):
+
+    user_email = get_user_email(username)
+
+    with open('./app/templates/email_templates/new-course.template', 'r') as file:
+        data = file.read()
+
+    email_body = data % (course, username)
+
+    request = requests.post(app.config['MAILGUN_URL'],
+                            auth=('api', app.config['MAILGUN_APIKEY']),
+                            data={
+                                'from': 'Cloudbot <cloudbot@hrl.uoit.ca>',
+                                'to': user_email,
+                                'subject': 'New Cloud Course Available',
+                                'html': email_body})
+
+
+@celery.task(bind=True)
+def send_ta_info(self, username, course):
+
+    user_email = get_user_email(username)
+
+    with open('./app/templates/email_templates/ta-course-info.template', 'r') as file:
+        data = file.read()
+
+    email_body = data % (course, username)
+
+    request = requests.post(app.config['MAILGUN_URL'],
+                            auth=('api', app.config['MAILGUN_APIKEY']),
+                            data={
+                                'from': 'Cloudbot <cloudbot@hrl.uoit.ca>',
+                                'to': user_email,
+                                'subject': 'Added as TA to Cloud Course',
                                 'html': email_body})

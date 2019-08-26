@@ -2,30 +2,93 @@
 {#{% import 'bootstrap/form.html' as wtf %}#}
 
 {% block app_content %}
-    <h1>Course Overview</h1>
-    	{#  <h3>Running Jobs:</h3>
-	{% for job in active_jobs %}
-	<p>test</p>
-	{% endfor %}
-	<h3>Scheduled Jobs:</h3>
-	{% for job in scheduled_jobs %}
-	<p>test</p>
-	{% endfor %} #}
-	
-	<div class='row'>
-		<div class='col-md-4'>
-			{% if projects %}
-			<h3>Deployed Projects</h3>
-			<b>Instructor Projects</b>
-			{% for project in projects['instructors']|sort %}
-			<p>{{ project }}</p>
-			{% endfor %}
+	<h2>Course Notices</h2>
+        <div class="alert alert-info alert-dismissible" role="alert">
+                <h4>Course Setup Guide:</h4>
+                <p>Please upload your MyCampus CSV roster under Manage -> Users, then set a schedule under Manage -> Schedule, followed by a quota restriction under Manage -> Quota</p>
+        </div>
+        <div class="alert alert-warning alert-dismissible" role="alert">
+                <h4 class="alert-heading">Warning:</h4>
+		<p>It is VERY important that you set a quota under Manage -> Quota to ensure students can't deploy more resources than they need in each lab! This quota represents the maximum number of VMs and other assets that can be deployed by each student. If this quota is too open, you may run out of resources.</p>
+        </div>
 
-			<b>Student Projects</b>
-			{% for project in projects['students']|sort %}
-			<p>{{ project }}</p>
-			{% endfor %}
-			{% endif %}
+	<div class="card-header">
+		<nav>
+			<div class="nav nav-tabs" id="nav-tab" role="tablist">
+				<a class="nav-item nav-link active" id="nav-student-projects-tab" data-toggle="tab" href="#nav-student-projects" role="tab" aria-controls="nav-student-projects" aria-selected="false">Student Projects</a>
+				<a class="nav-item nav-link" id="nav-group-projects-tab" data-toggle="tab" href="#nav-group-projects" role="tab" aria-controls="nav-group-projects" aria-selected="false">Group Projects</a>
+				<a class="nav-item nav-link" id="nav-options-tab" data-toggle="tab" href="#nav-options" role="tab" aria-controls="nav-options" aria-selected="true">Course Settings</a>
+			</div>
+		</nav>
+	</div>
+
+	<div class="card-body">
+		<div class="tab-content" id="nav-tabContent">
+			<div class="tab-pane fade show active" id="nav-student-projects" role="tabpanel" aria-labelledby="nav-student-projects-tab">
+				<div class='card-text'>
+					<table class="table table-striped">
+						<thead class="thead-dark">
+			  				<tr><th>Project Name</th><th>Description</th><th>Status</th></tr>
+			  			</thead>
+						<tbody>
+							{% for project in projects['students']|sort %}
+								<tr>
+									<td>{{ project }}</td>
+									<td>Student Project</td>
+									{% for p in project_info %}
+										{% if project == p.name %}
+											{% if p.enabled %}
+												<td>Enabled</td>
+											{% else %}
+												<td>Disabled</td>
+											{% endif %}
+										{% endif %}
+									{% endfor %}
+								</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+		  	</div>
+		  	<div class="tab-pane fade" id="nav-group-projects" role="tabpanel" aria-labelledby="nav-group-projects-tab">
+				<div class='card-text'>
+					<table class="table table-striped">
+						<thead class="thead-dark">
+			  				<tr><th>Project Name</th><th>Description</th><th>Status</th></tr>
+			  			</thead>
+						<tbody>
+							{% for project in projects['groups']|sort %}
+								<tr>
+									<td>{{ project }}</td>
+									<td>Group Project</td>
+									{% for p in project_info %}
+										{% if project == p.name %}
+											{% if p.enabled %}
+												<td>Enabled</td>
+											{% else %}
+												<td>Disabled</td>
+											{% endif %}
+										{% endif %}
+									{% endfor %}
+								</tr>
+							{% endfor %}
+						</tbody>
+					</table>
+				</div>
+		  	</div>
+		  	<div class="tab-pane fade" id="nav-options" role="tabpanel" aria-labelledby="nav-options-tab">
+			  	<div class='card-text'>
+			  		<table class="table table-striped">
+			  			<thead class="thead-dark">
+			  				<tr><th>Option</th><th>Current Setting</th></tr>
+			  			</thead>
+			  			<tbody>
+			  				<tr><td>Test</td><td></td></tr>
+			  			</tbody>
+			  		</table>
+			  	</div>
+		  	</div>
 		</div>
 	</div>
+
 {% endblock %}

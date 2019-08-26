@@ -22,25 +22,27 @@ class QuotaForm(FlaskForm):
     cores_quota = SelectField('Cores', coerce=int)
     ram_quota = SelectField('RAM', coerce=int)
     networks_quota = SelectField('Networks', coerce=int)
-    subnets_quota = SelectField('Subnets', coerce=int)
-    ports_quota = SelectField('Ports', coerce=int)
-    fips_quota = SelectField('Floating IPs', coerce=int)
-    routers_quota = SelectField('Routers', coerce=int)
+    
     submit = SubmitField('Set Quota')
 
-    def __init__(self, *args, **kwargs):
-        super(QuotaForm, self).__init__(*args, **kwargs)
-        quota_range = [(i, i) for i in range(1,11)]
+    #def __init__(self, *args, **kwargs):
+    #    super(QuotaForm, self).__init__(*args, **kwargs)
+    #    quota_range = [(i, i) for i in range(1,11)]
 
-        self.instances_quota.choices = quota_range
-        self.cores_quota.choices = quota_range
-        self.ram_quota.choices = [(512, '512 MB'), (1024, '1024 MB'), (2048, '2048 MB'), (4096, '4096 MB'), (8192, '8192 MB'), (16384, '16384 MB')]
-        self.networks_quota.choices = quota_range
-        self.subnets_quota.choices = quota_range
-        self.ports_quota.choices = quota_range
-        self.fips_quota.choices = quota_range
-        self.routers_quota.choices = quota_range
+    #    self.instances_quota.choices = [(i, i) for i in range(1, int(app.config['QUOTA_INSTANCES_MAX'])+1)]
+    #    self.cores_quota.choices = [(i, i) for i in range(1, int(app.config['QUOTA_CORES_MAX'])+1)]
+        
+    #    ram_values = []
+    #    last_value = 512
 
+    #    for i in range(1024, int(app.config['QUOTA_RAM_MAX'])+1, 1024):
+    #        if i == last_value*2:
+    #            ram_values.append((i, str(i)+' MB'))
+    #            last_value = i
+
+    #    self.ram_quota.choices = ram_values
+
+    #    self.networks_quota.choices = [(i, i) for i in range(1, int(app.config['QUOTA_NETWORKS_MAX'])+1)]
 
 #
 # NETWORK FORMS 

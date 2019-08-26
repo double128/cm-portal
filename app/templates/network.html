@@ -50,6 +50,10 @@
 {% endblock %}
 
 {% block app_content %}
+	<div class="alert alert-danger alert-dismissible" role="alert">
+		<h4 class="alert-heading">Warning:</h4>
+		<p>Do not deploy a network unless you are absolutely certain you need to! A secure network is available for students by default.</p>
+	</div>
 	<div class='row'>
 		<div class='col-md'>
 			<div class='d-flex justify-content-end'>
@@ -100,15 +104,27 @@
 									</tr>
 									<tr>
 										<th>Subnet Name:</th>
+										{% if 'subnets' in networks_list[network] %}
 										<td>{{ networks_list[network]['subnets']['name'] }}</td>
+										{% else %}
+										<td>Pending</td>
+										{% endif %}
 									</tr>
 									<tr>
 										<th>Subnet CIDR:</th>
+										{% if 'subnets' in networks_list[network] %}
 										<td>{{ networks_list[network]['subnets']['cidr'] }}</td>
+										{% else %}
+										<td>Pending</td>
+										{% endif %}
 									</tr>
 									<tr>
 										<th>Address Pool:</th>
+										{% if 'subnets' in networks_list[network] %}
 										<td>{{ networks_list[network]['subnets']['allocation_pools'][0]['start'] }}-{{ networks_list[network]['subnets']['allocation_pools'][0]['end'] }}</td>
+										{% else %}
+										<td>Pending</td>
+										{% endif %}
 									</tr>
 									<tr>
 										<th>Router Name:</th>
@@ -116,7 +132,11 @@
 									</tr>
 									<tr>
 										<th>Gateway IP:</th>
+										{% if 'subnets' in networks_list[network] %}
 										<td>{{ networks_list[network]['subnets']['gateway_ip'] }}</td>
+										{% else %}
+										<td>Pending</td>
+										{% endif %}
 									</tr>
 								</table>
 								</div>
@@ -130,10 +150,14 @@
 											<tr>
 												<td>
 													<div class='custom-control custom-switch'>
-														{% if networks_list[network]['subnets']['enable_dhcp'] == true %}
+														{% if 'subnets' in networks_list[network] %}
+															{% if networks_list[network]['subnets']['enable_dhcp'] == true %}
 														<input id='dhcp_toggle_{{ network }}' name='dhcp_toggle_{{ network }}' type='checkbox' class='custom-control-input' checked>
-														{% else %}
+															{% else %}
 														<input id='dhcp_toggle_{{ network }}' name='dhcp_toggle_{{ network }}' type='checkbox' class='custom-control-input'>
+															{% endif %}
+														{% else %}
+														<input id='dhcp_toggle_{{ network }}' name='dhcp_toggle_{{ network }}' type='checkbox' class='custom-control-input' disabled>
 														{% endif %}
 														<label class='custom-control-label' for='dhcp_toggle_{{ network }}'>
 													</div>
@@ -154,7 +178,7 @@
 												</td>
 												<td>
 													Enable Port Security
-												</td>
+												  </td>
 											</tr>
 											<tr>
 												<td>
@@ -213,7 +237,7 @@
 
 	{% else %}
 	<div class='d-flex justify-content-center'>
-	<span class='text-secondary'>No networks found for this course.</span>
+	<span class='text-secondary'>No custom networks found for this course.</span>
 	</div>
 	{% endif %}
 

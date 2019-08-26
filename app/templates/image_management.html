@@ -10,37 +10,52 @@
 <link rel='stylesheet' type='text/css' href='{{ url_for('static', filename='image_management/image_management.css') }}'/>
 {% endblock %}
 
-
 {% block app_content %}
-<h1>Images</h1>
-<form action="" method="post" id="form" novalidate>
+<form action="" method="post" id="form">
 	{{ form.hidden_tag() }}
-    	<table style="text-align:left">
-        <tr>
-            <th></th>
-            <th>Public Images</th>
-        </tr>
-        {% for data in form if data.type == "BooleanField" and data.description == "public" %}
-        <tr>
-            <td>{{ data }}</td>
-            <td>{{ data.label }}</td>
-        </tr>
-        {% endfor %}
-        <tr><th><br></th></tr>
-        <tr>
-            <th></th>
-            <th>Private Images</th>
-        </tr>
-        {% for data in form if data.type == "BooleanField" and data.description == "private" %}
-        <tr>
-            <td>{{ data }}</td>
-            <td>{{ data.label }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+	<table class='table table-bordered'>
+		<thead>
+			<tr class='d-flex'>
+				<th class='col-1' style='text-align:center;vertical-align:middle;'>
+					<i class='fas fa-check fa-fw text-secondary'></i>
+				</th>
+				<th class='col text-secondary'>Public Images</th>
+			</tr>
+		</thead>
+		
+		<tbody>
+		{% for data in form if data.type == "BooleanField" and data.description == "public" %}
+			<tr class='d-flex'>	
+				<td class='col-1' style='text-align:center;vertical-align:middle;'>
+					<div class='custom-control custom-checkbox'>
+						<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input' hidden='true'>
+						<label class='custom-control-label' for='{{ data.id }}'/>
+					</div>
+				</td>
+				<td class='col'>{{ data.label }}</td>
+			</tr>
+		{% endfor %}
+		</tbody>
+
+	</table>
+
+	<table class='table' style='table-layout:fixed;'>
+		{% for data in form if data.type == "BooleanField" and data.description == "private" %}
+		<tr>
+			<td>
+				<div class='custom-control custom-checkbox'>
+					<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input position-static'>
+					<label class='custom-control-label' for='{{ data.id }}'/>
+				</div>
+			</td>
+		    
+			<td>{{ data.label }}</td>
+		</tr>
+		{% endfor %}
+	</table>
     <p> 
-    	<input class="submit-button" id="change_visibility" name="change_visibility" type="submit" value="Change Visibility" onclick="submitButton(this)">
-    	<input class="submit-button" id="download_image" name="download_image" type="submit" value="Get Image Download Link" onclick="submitButton(this)">
+	<input class="submit-button btn btn-secondary" id="change_visibility" name="change_visibility" type="submit" value="Change Visibility" onclick="submitButton(this)">
+	<input class='submit-button btn btn-secondary' id='download_image' name='download_image' type='submit' value='Get Image Download Link' onclick='submitButton(this)'>
     </p>
 </form>
 {% endblock %}

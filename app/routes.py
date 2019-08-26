@@ -1,3 +1,8 @@
+# DOCS
+# novaclient https://docs.openstack.org/python-novaclient/queens/reference/api/index.html
+# neutronclient https://www.pydoc.io/pypi/python-neutronclient-6.8.0/autoapi/v2_0/client/index.html (cert is invalid for some reason)
+# keystoneclient https://docs.openstack.org/python-keystoneclient/queens/using-api-v3.html
+#
 from flask import render_template, flash, redirect, url_for, request, jsonify, session
 from flask_login import current_user, login_user, logout_user, login_required
 from werkzeug import secure_filename
@@ -40,7 +45,7 @@ def index():
     #jobs = inspect()
     #print(jobs.active())
     #return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course), active_jobs=jobs.active(), scheduled_jobs=jobs.scheduled())
-    return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course),
+    return render_template('index.html', title='Home', projects=keystone.get_projects(current_user.course), project_info=keystone.get_project_info(current_user.course),
             navbar_text = 'Course Overview: ' + current_user.course)
 
 
@@ -82,6 +87,7 @@ def course_management():
     from app.forms import create_student_checkbox_list
 
     course_student_list = keystone.get_course_users(current_user.course)
+    print(course_student_list)
     course_form = create_student_checkbox_list(course_student_list)
     upload_form = forms.UploadForm()
     
@@ -125,7 +131,8 @@ def course_management():
             course=current_user.course, 
             course_form=course_form, 
             upload_form=upload_form, 
-            navbar_text='Course Management: ' + current_user.course)
+            navbar_text='Course Management: ' + current_user.course,
+            project_info=keystone.get_project_info(current_user.course))
 
 
 @app.route('/schedule', methods=['GET', 'POST'])
@@ -254,15 +261,33 @@ def delete_students():
 @login_required
 def edit_quota():
     # Get quota details from the first student in the course
-    student_quota = nova.get_project_quota(list(keystone.get_projects(current_user.course)['students'].values())[0])
-    print(student_quota)
+    students = list(keystone.get_projects(current_user.course)['students'].values())
+    if not students:
+        flash('No students registered!')
+        return redirect(url_for('index'))
+
+    #student_quota = nova.get_project_quota(list(keystone.get_projects(current_user.course)['students'].values())[0])
+    student_quota = nova.get_project_quota(students[0])
 
     form = forms.QuotaForm()
+
+    form.instances_quota.choices = [(i, i) for i in range(1, int(app.config['QUOTA_INSTANCES_MAX'])+1)]
+    form.cores_quota.choices = [(i, i) for i in range(1, int(app.config['QUOTA_CORES_MAX'])+1)]
+
+    ram_values = []
+    for i in range(1024, int(app.config['QUOTA_RAM_MAX'])+1, 1024):
+        if i <= 8192 and i % 1024 == 0:
+            ram_values.append((i, str(i)+' MB'))
+        elif i % 2048 == 0:
+            ram_values.append((i, str(i)+' MB'))
+
+    form.ram_quota.choices = ram_values
+    form.networks_quota.choices = [(i, i) for i in range(1, int(app.config['QUOTA_NETWORKS_MAX'])+1)]
+
     if form.validate_on_submit():
         for pid in keystone.get_projects(current_user.course)['students'].values():
-            nova.update_project_quota.delay(pid, form.instances_quota.data, form.cores_quota.data, \
-                     form.ram_quota.data, form.networks_quota.data, form.subnets_quota.data, \
-                     form.ports_quota.data, form.fips_quota.data, form.routers_quota.data)
+            nova.update_project_quota.delay(pid, form.instances_quota.data, form.cores_quota.data, form.ram_quota.data, form.networks_quota.data,
+                    form.networks_quota.data, int(form.networks_quota.data)*10, form.instances_quota.data, form.networks_quota.data) 
         flash('Quota updated')
         return redirect(url_for('index'))
 
@@ -271,10 +296,7 @@ def edit_quota():
     form.cores_quota.default = student_quota['cores']
     form.ram_quota.default= student_quota['ram']
     form.networks_quota.default = student_quota['network']
-    form.subnets_quota.default = student_quota['subnet']
-    form.ports_quota.default = student_quota['port']
-    form.fips_quota.default = student_quota['floatingip']
-    form.routers_quota.default = student_quota['router']
+    
     form.process()
 
     return render_template('edit_quota.html', 
@@ -366,13 +388,6 @@ def network_panel():
             navbar_text='Networks: ' + current_user.course)
 
 
-def check_if_change(prev, curr):
-    if prev == curr:
-        return False
-    else:
-        return True
-
-
 @app.route('/images', methods=['GET', 'POST'])
 @login_required
 def image_management():
@@ -415,8 +430,9 @@ def image_management():
             navbar_text='Images: ' + current_user.course)
 
 
+######################################
 #
-# API
+# API Functions
 #
 ######################################
 
@@ -432,8 +448,9 @@ def api_password_reset():
 @app.route('/api/schedule', methods=['GET'])
 def api_get_schedule():
 
-    #if not request.args.get('token') and not request.args.get('token') == app.config['API_TOKEN']:
-    #   return jsonify({ 'Error': 'Invalid Token'})
+    if not hasattr(current_user, 'id'):
+        if not request.args.get('token') and not request.args.get('token') == app.config['API_TOKEN']:
+          return jsonify({ 'Error': 'Invalid Token'})
 
     # If we get a request from fullcalendar with a date, then set the end date to today
     if request.args.get('start') and request.args.get('end'):
@@ -442,11 +459,11 @@ def api_get_schedule():
         today = date.today()
 
     courses = Course.query.all()
-    #result = CourseSchema(many=True).dump(courses).data
     result = CourseSchema(many=True).dump(courses)
     tz = pytz.timezone('America/Toronto')   
     
     schedule_list = []
+    week_dates = get_week_dates(today)
     for r in result:
         for t in r['course_schedule']:
             course_dict = {}
@@ -454,7 +471,6 @@ def api_get_schedule():
             course_dict['instructor'] = r['instructor']
             course_dict['course'] = r['course']
             
-            week_dates = get_week_dates(today)
             for w in week_dates:
                 if w.weekday() == t['weekday']:
                     start = datetime.fromtimestamp(t['start_time']/1000)
@@ -471,96 +487,87 @@ def api_get_schedule():
                     course_dict['weekday'] = w.weekday()
                     course_dict['event_id'] = t['id']
                     
-                    if course_dict['instructor'] == current_user.id:
+                    if hasattr(current_user, 'course') and course_dict['course'] == current_user.course:
                         #course_dict['editable'] = True # Current user owns this event so let them edit it
                         #course_dict['startEditable'] = False
                         #course_dict['durationEditable'] = False
                         #course_dict['durationEditable'] = False
                         #course_dict['resourceEditable'] = False
                         #course_dict['startEditable'] = False
-                        course_dict['editable'] = False
+                        course_dict['editable'] = True
+                        course_dict['backgroundColor'] = '#3498DB'
+                        course_dict['borderColor'] = '#3498DB'
+                    elif 'Open Weekend' in course_dict['course']:
+                        course_dict['backgroundColor'] = '#18BC9C'
+                        course_dict['borderColor'] = '#18BC9C'
                     else:
                         course_dict['editable'] = False
                         course_dict['backgroundColor'] = '#ccc'
                         course_dict['borderColor'] = '#ccc'
 
             schedule_list.append(course_dict)
+
     return jsonify(schedule_list)
 
 
 @app.route('/api/cron', methods=['GET'])
 def api_cron_tasks():
 
-    #if not request.args.get('token') and not request.args.get('token') == app.config['API_TOKEN']:
-    #   return jsonify({ 'Error': 'Invalid Token'})
+    if not request.args.get('token') and not request.args.get('token') == app.config['API_TOKEN']:
+      return jsonify({ 'Error': 'Invalid Token'})
 
     # Get current time in EST/EDT in ISO formatting
-    #current_time = datetime.now().astimezone(pytz.timezone('America/Toronto'))
-    course_schedule = get_schedule().json # We can use the function above since it's already parsed nicely
-
-    #test_time = datetime(2019, 8, 20, 13, 0, 0).astimezone(pytz.timezone('America/Toronto'))
-    current_time = datetime(2019, 8, 20, 18, 0, 0).astimezone(pytz.timezone('America/Toronto'))
-    print('CURRENT TIME:')
-    print(current_time)
+    current_time = datetime.now() #.astimezone(pytz.timezone('America/Toronto'))
+    course_schedule = api_get_schedule().json # We can use the function above since it's already parsed nicely
+    # current_time = datetime(2019, 8, 25, 10, 0, 0) #.astimezone(pytz.timezone('America/Toronto'))
+    # print('CURRENT TIME: ' + str(current_time))
 
     for c in course_schedule:
-        course = c['course']
-        start_time = dateutil.parser.parse(c['start'])
-        end_time = dateutil.parser.parse(c['end'])
-    
-        print('')
-        print(course)
-        
-        print(c['title'])
-        print(start_time)
-        print(end_time)
 
-        if start_time.day == current_time.day:
-            # Set variable for COURSE_TIME_BUFFER minutes before and after the course is scheduled
+        course = c['course']
+        start_time = dateutil.parser.parse(c['start']) #.astimezone(pytz.timezone('America/Toronto'))
+        end_time = dateutil.parser.parse(c['end']) #.astimezone(pytz.timezone('America/Toronto'))
+        # print(c['title'] + ': ' + str(start_time) + ' -> ' + str(end_time))
+
+        if current_time.weekday() == 5 or current_time.weekday() == 6:
+            # print('Open Weekend')
+            keystone.enable_disable_projects.delay(c['title'].split(' ')[0], True)
+
+        elif start_time.day == current_time.day:
+           
             course_time_before = start_time - timedelta(minutes=app.config['COURSE_TIME_BUFFER'])
             course_time_after = end_time + timedelta(minutes=app.config['COURSE_TIME_BUFFER'])
 
-            # Current time is <= COURSE_TIME_BUFFER minutes before the scheduled time
-            if course_time_before <= current_time < start_time:
-                print('[Current time is <= 30 minutes before scheduled time]')
-                # Iterate through student projects for this course and enable them, so long as they aren't enabled already
-
-            
-            # The course is running at this time
-            elif start_time <= current_time <= end_time:
-                print('[Course is currently scheduled for the current time]')
-                
-
-            # Current time is <= COURSE_TIME_BUFFER minutes after the scheduled time
-            elif end_time < current_time <= course_time_after:
-                print('[Current time is <= 30 minutes after scheduled time]')
-                # Disable the student projects, but ONLY if there's no other session scheduled for this course right now or a session coming up in 30 minutes
-                for c2 in course_schedule:
-                    if course in c2['course']:
-                        print('found other schedule for ' + course)
-
-            else:
-                print('[Course is not running anytime soon]')
-                # if $RANDOM_CHOSEN_STUDENT_PROJECT is enabled then:
-                #   disable
+            if course_time_before <= current_time < course_time_after:
+                # print('Course running')
+                keystone.enable_disable_projects.delay(c['title'].split(' ')[0], True)
+                keystone.enable_disable_projects.delay(c['title'].split(' ')[0] + '-Group', False)
 
         else:
-            print('[Scheduled time is not today]')
-            # if $RANDOM_CHOSEN_STUDENT_PROJECT is enabled then:
-            #   disable
+            # print('Course not running')
+            keystone.enable_disable_projects.delay(c['title'].split(' ')[0], False)
+            keystone.enable_disable_projects.delay(c['title'].split(' ')[0] + '-Group', True)
 
-
-    
     return 'ok'
+
 
 #@app.before_first_request
 #def setup_periodic_tasks(sender, **kwargs):
 #    sender.add_periodic_task(10.0, test.s('hello'), name='add every 10s')
 
+
+######################################
 #
 # USEFUL FUNCTIONS 
 #
 ######################################
+
+def check_if_change(prev, curr):
+    if prev == curr:
+        return False
+    else:
+        return True
+
 
 def clean_html_tags(html):
     cleanr = re.compile('<.*?>')
@@ -585,35 +592,48 @@ def convert_int_to_weekday(weekday):
 def get_week_dates(today):
     weekday = today.weekday()
     start = today - timedelta(days=weekday)
-    return [start + timedelta(days=d) for d in range(7)]
+    datelist = []
+    for d in range(6):
+        datelist.append(start + timedelta(days=d))
+    datelist.append(today - timedelta(days=7))
+    return datelist
 
 
 def process_csv(course, file):
     with open(file, 'r') as filehandle:
         for line in filehandle:
-            if '@uoit' in line:
-                #try:
-                line = re.sub('\"|\n|\r\n|\r', '', line)
-                username = line.split(',')[4]
-                email = line.split(',')[9]
-                keystone.process_new_users.delay(course, username, email)
-                #except IndexError:
-                #    return render_template("500.html", error="Something is wrong with your .csv file formatting. Please make sure that the file has been formatted correctly before uploading again.")
+            line = re.sub('\"|\n|\r\n|\r', '', line)
+            if '@' in line:
+                try:
+                    username = line.split(',')[4]
+                    email = line.split(',')[9]
+                    keystone.process_new_users.delay(course, username, email)
+                except IndexError:
+                    return render_template("500.html", error="Something is wrong with your .csv file formatting. Please make sure that the file has been formatted correctly before uploading again.")
+            if 'Group' or 'group' in line:
+                try:
+                    group_id = line.split(',')[1]
+                    for username in line.split(',')[2:]:
+                        print('Group ' + group_id + ' add ' + username)
+                        keystone.process_new_users(course, username, None, group_id)
+                except IndexError:
+                    return render_template("500.html", error="Something is wrong with your .csv file formatting. Please make sure that the file has been formatted correctly before uploading again.")
 
+######################################
 #
 # TEST ZONE
 # 
 ######################################
 
-@app.route('/test', methods=['GET', 'POST'])
-@login_required
-def testing():
-    #networks_list = neutron.list_project_network_details(current_user.course)
-    #neutron.verify_network_integrity(current_user.course, networks_list)
+# @app.route('/test', methods=['GET', 'POST'])
+# @login_required
+# def testing():
+#     #networks_list = neutron.list_project_network_details(current_user.course)
+#     #neutron.verify_network_integrity(current_user.course, networks_list)
 
-    #courses = Course.query.all()
-    #result = CourseSchema(many=True).dump(courses)
-    #print(result)
+#     #courses = Course.query.all()
+#     #result = CourseSchema(many=True).dump(courses)
+#     #print(result)
 
-    return render_template('testing.html')
+#     return render_template('testing.html')
 

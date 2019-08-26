@@ -26,48 +26,44 @@
 {% endblock %}
 
 {% block app_content %}
+
 	<form action='' method='post' id='form'>
 		{{ course_form.hidden_tag() }}
 		
 		<div class='d-flex justify-content-end pb-2'>
 			<div class='pr-1'><input class="submit-button btn btn-primary" id="reset_password" name="reset_password" type="submit" value="Reset Password" onclick="submitButton(this)"></div>
-			<div class='pr-1 pl-1'><input class="submit-button btn btn-primary" id="toggle_ta_status" name="toggle_ta_status" type="submit" value="Toggle TA Status" onclick="submitButton(this)"></div>
+			<div class='pr-1'><input class="submit-button btn btn-primary" id="toggle_ta_status" name="toggle_ta_status" type="submit" value="Toggle TA Status" onclick="submitButton(this)"></div>
 			<div class='pl-1'><input class="submit-button btn btn-danger" id="delete_student" name="delete_student" type="submit" value="Delete Student" onclick="submitButton(this)"></div>
+			<div class='pl-1'>
+				<a href='#uploadCSVModal' class='btn btn-success' data-toggle='modal' data-target='#uploadCSVModal'>Upload Course CSV</a>
+			</div>
 		</div>
 
-		<table class='table table-hover'>
-			<thead class='thead-light'>
+		<table class='table table-light'>
+			<thead class='thead-dark'>
    				<tr>
 					<th><i style='margin-left:15px' class='fas fa-check fa-fw'></i></div></th>
 					<th>Username</th>
-        				<th>Project Name</th>
-    				</tr>
+        			<th>Project Name</th>
+    			</tr>
 			</thead>
 			<tbody>
 				{% for data in course_form if data.type == "BooleanField" %}
     				<tr>
-					<td>
-						<div class='custom-control custom-checkbox'>
-							<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input position-static'>
-							<label class='custom-control-label' for='{{ data.id }}'/>
-						</div>
-					</td>
-					<td>{% if 'nstructors' in data.description %}{{ data.label }} (TA){% else %}{{ data.label }}{% endif %}</td>
-   		    			<td>{{ data.description }}</td>
+						<td>
+							<div class='custom-control custom-checkbox'>
+								<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input position-static'>
+								<label class='custom-control-label' for='{{ data.id }}'/>
+							</div>
+						</td>
+						<td>{% if 'nstructors' in data.description %}{{ data.label }} (TA){% else %}{{ data.label }}{% endif %}</td>
+	   		    		<td>{{ data.description }}</td>
     				</tr>
-    				{% endfor %}
+    			{% endfor %}
 			</tbody>
 		</table>
 		<hr>
 	</form>
-
-	<div class='row'>
-		<div class='col-md'>
-			<div class='d-flex justify-content-end'>
-				<a href='#uploadCSVModal' class='btn btn-info' data-toggle='modal' data-target='#uploadCSVModal'>Upload Course CSV</a>
-			</div>
-		</div>
-	</div>
 
 	<div id='uploadCSVModal' class='modal fade' role='dialog'>
 		<div class='modal-dialog modal-dialog-centered'>

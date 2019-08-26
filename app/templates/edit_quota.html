@@ -18,10 +18,20 @@
 	{{ wtf.render_field(form.cores_quota) }}
 	{{ wtf.render_field(form.ram_quota) }}
 	{{ wtf.render_field(form.networks_quota) }}
+
+	{# 
+	Network dropdown menu/slider/whatever
+	Subnet value = Network
+	Port value = Network^2
+	Router = Network
+	Floating IPs = Instances
+	#}
+
+	{#{{ wtf.render_field(form.networks_quota) }}
 	{{ wtf.render_field(form.subnets_quota) }}
 	{{ wtf.render_field(form.ports_quota) }}
 	{{ wtf.render_field(form.fips_quota) }}
-	{{ wtf.render_field(form.routers_quota) }}
+	{{ wtf.render_field(form.routers_quota) }}#}
 
 	<input class="submit-button btn btn-success" id="submit" name="submit" type="submit" value="Update Quota" onclick="submitButton(this)">
     </form>

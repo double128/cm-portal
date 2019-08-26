@@ -4,7 +4,7 @@ from keystoneauth1.identity import v3
 from keystoneauth1 import session
 from keystoneauth1 import exceptions
 from keystoneclient.v3 import client as keystoneclient
-from keystoneclient import utils 
+from keystoneclient import utils
 from app.db_model import Course, Schedule
 from app.exceptions import ClassInSession
 import pprint
@@ -24,7 +24,7 @@ class OpenStackUser(UserMixin):
     osession = None
     project = None
     course = None
-    
+
     def login(self, id, password, course_id):
         self.id = id
         self.project = 'INFR-' + course_id + '-Instructors'
@@ -51,6 +51,7 @@ class OpenStackUser(UserMixin):
         self.is_authenticated = True
         login.users[id] = self
     
+
     def check_if_course_running(self):
         from app.models import convert_utc_to_eastern  # Output the time in EST/EDT rather than UTC, which is how time is stored in the DB
         weekday = datetime.datetime.today().weekday()
@@ -106,6 +107,7 @@ def get_users():
 
 
 def get_course_users(course):
+    print('INSIDE GET COURSE USERS ============================')
     ks = get_keystone_session()
     projects = get_projects(course)
     instructor_project_name = list(projects['instructors'].keys())[0]
@@ -115,7 +117,9 @@ def get_course_users(course):
     
     role_dict = {}
     for role in role_assignments_list:
-        role_dict[role.user['id']] = role.scope['project']['id']
+        # Filter out any "Group" projects
+        if 'roup' not in utils.find_resource(ks.projects, role.scope['project']['id']).name:
+            role_dict[role.user['id']] = role.scope['project']['id']
     
     user_dict = {}
     for user in user_list:
@@ -128,6 +132,7 @@ def get_course_users(course):
                 else:
                     if role_dict[user.id] == instructor_project_id:
                         user_dict[user.name] = instructor_project_name
+
     return dict(sorted(user_dict.items())) # Return list alphabetically
 
 
@@ -158,14 +163,35 @@ def get_username_from_email(email):
 
 def get_projects(course):
     ks = get_keystone_session()
-    projects = {'instructors': {}, 'students': {}}
+    projects = {'instructors': {}, 'students': {}, 'groups': {}}
     for p in ks.projects.list():
         if course in p.name:
             if 'nstructor' in p.name:
                 projects['instructors'][p.name] = p.id
+            elif 'roup' in p.name:
+                projects['groups'][p.name] = p.id
             else:
                 projects['students'][p.name] = p.id
     return projects
+
+
+def get_project_info(course):
+    ks = get_keystone_session()
+    projects = []
+    for p in ks.projects.list():
+        if course in p.name:
+            projects.append(p)
+    return projects
+
+
+@celery.task(bind=True)
+def enable_disable_projects(course, enable, ignore_instructors=True):
+    ks = get_keystone_session()
+    for project in get_project_info(course):
+        if ignore_instructors and 'nstructors' in project.name:
+            continue
+        if not project.enabled == enable:
+            ks.projects.update(project.id, enabled=enable)
 
 
 def get_project_id(project):
@@ -196,6 +222,7 @@ def get_project_role(username, project):
 
 
 def add_user(username, email):
+    from app.email_model import send_password_reset_info
     keystone = get_keystone_session()
     success = keystone.users.create(name=username,
                 email=email,
@@ -204,6 +231,7 @@ def add_user(username, email):
                 description='Auto-generated Account',
                 enabled=True)
     if success:
+        send_password_reset_info(username)
         return True
     else:
         return False
@@ -214,7 +242,7 @@ def add_project(project):
     success = ks.projects.create(name=project,
                                     domain='default',
                                     description='Auto-generated Project',
-                                    enabled=True) 
+                                    enabled=False)
     if success:
         return True
     else:
@@ -225,7 +253,8 @@ def add_role(username, project, course):
     ks = get_keystone_session()
 
     uid = get_user_id(username)
-    pid = get_projects(course)['students'][project]
+    #pid = get_projects(course)['students'][project]
+    pid = get_project_id(project)
     user_role_id = utils.find_resource(ks.roles, 'user').id
 
     if not uid or not pid:
@@ -239,20 +268,28 @@ def add_role(username, project, course):
 
 
 @celery.task(bind=True)
-def process_new_users(self, course, username, email):
+def process_new_users(self, course, username, email = None, group_id = None):
+
+    from app.email_model import send_new_course_info
+
     users = get_users()
     projects = get_projects(course)
+
     if not users or not projects:
         return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not get users or projects'}
 
-    if username not in users:
+    if username not in users and email:
         if not add_user(username, email):
             return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not create user ' + username}
 
-    project = course + '-' + username
+    if group_id:
+        project = course + '-Group' + group_id
+    else:
+        project = course + '-' + username
+
     instructor_project = list(projects['instructors'].keys())[0]
     if not get_project_role(username, instructor_project): # Check if the user is a TA (included in the instructor project)
-        if project not in projects['students']:
+        if project not in projects['students'] and project not in projects['groups']:
             if not add_project(project):
                 return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not add user ' + username + ' to project ' + project}
 
@@ -260,6 +297,7 @@ def process_new_users(self, course, username, email):
     if not add_role(username, project, course):
         return {'task': 'Process User', 'status': 'Failed', 'result': 'Could not add user role for ' + username + ' to project ' + project}
 
+    send_new_course_info(username, course)
     return {'task': 'Process User', 'status': 'Complete', 'result': 'Processed user ' + username + ' with project ' + project}
 
 
@@ -274,6 +312,7 @@ def reset_user_password(username):
 
 
 def toggle_ta_status(username, course, current_role):
+    from app.email_model import send_ta_info
     ks = get_keystone_session()
     project_list = get_projects(course)
     instructor_project_id = list(project_list['instructors'].values())[0]
@@ -286,6 +325,7 @@ def toggle_ta_status(username, course, current_role):
             async_delete_user_networks.delay(list_project_network_details(course), course + '-' + username)
             ks.projects.delete(project_list['students'][course + '-' + username])
             ks.roles.grant(utils.find_resource(ks.roles, 'user').id, user=get_user_id(username), project=instructor_project_id)
+            send_ta_info(username, course)
 
     elif current_role == 'ta':
         # Demote the TA to student status

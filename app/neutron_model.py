@@ -126,27 +126,27 @@ def async_network_create(self, project_id, network_name, subnet_name, router_nam
         network_id = create_network(project_id, network_name)
         if not network_id:
             return {'task': 'Create Network', 'status': 'Failed', 'result': 'Could not create network ' + network_name}
-    except neutronclient.exceptions.ServiceUnavailable as exc:
-        raise self.retry(exc=exc)
     except neutronclient.exceptions.NeutronClientNoUniqueMatch:
         pass
+    except Exception as exc:
+        raise self.retry(exc=exc)
     
     try:
         subnet_id = create_subnet(project_id, network_id, subnet_name, cidr, gateway)
         if not subnet_id:
             return {'task': 'Create Subnet', 'status': 'Failed', 'result': 'Could not create subnet ' + subnet_name}
-    except neutronclient.exceptions.ServiceUnavailable as exc:
-        raise self.retry(exc=exc)
     except neutronclient.exceptions.NeutronClientNoUniqueMatch:
         pass
+    except Exception as exc:
+        raise self.retry(exc=exc)
 
     try:
         if not create_router(project_id, subnet_id, router_name, external_network_id):
             return {'task': 'Create Router', 'status': 'Failed', 'result': 'Could not create router ' + router_name}
-    except neutronclient.exceptions.ServiceUnavailable as exc:
-        raise self.retry(exc=exc)
     except neutronclient.exceptions.NeutronClientNoUniqueMatch:
         pass
+    except Exception as exc:
+        raise self.retry(exc=exc)
 
     return {'task': 'Create New Network', 'status': 'Complete', 'result': 'Successfully created network for project ' + project_id}
 
@@ -162,11 +162,11 @@ def async_network_delete(self, network):
     if network.get('router'):
         try:
             delete_router(network['router']['id'], network['subnets']['id'])
-        except neutronclient.exceptions.ServiceUnavailable as exc:
+        except Exception as exc:
             raise self.retry(exc=exc)
     try:
         delete_network(network['id'])
-    except neutronclient.exceptions.ServiceUnavailable as exc:
+    except Exception as exc:
         raise self.retry(exc=exc)
 
     return {'task': 'Delete Network', 'status': 'Complete', 'result': 'Successfully deleted network for project ' + network['project_id']}

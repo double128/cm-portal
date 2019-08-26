@@ -9,7 +9,6 @@ $(document).ready(function() {
        	        }
        	});
         	
-	{# Only allow one image at a time to be selected for download; this is the first of two checks, the backend can check as well just in case #}
        	$("input[name='download_image']").click(function(event) {
        	        var n = $("input[type='checkbox']:checked").length;
        	        if (n > 1) {

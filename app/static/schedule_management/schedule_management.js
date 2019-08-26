@@ -16,19 +16,6 @@
 			},
 
                         themeSystem: 'bootstrap',
-			
-			//customButtons: {
-			//	calendarmenu: {
-			//		text: 'test',
-			//		click: function() {
-			//			$('.fc-calendarMenu-button').dropdown();
-			//		},
-			//	},
-			//},
-
-			//bootstrapFontAwesome: {
-			//	calendarmenu: 'far fa-calendar-plus'
-			//},
 
                         defaultView: $(window).width() < 768 ? 'timeGridDay':'timeGridWeek',
                         windowResize: function changeCalendarView() {
@@ -41,7 +28,6 @@
                                         },
                         defaultDate: moment().format('YYYY-MM-DD'),
                         allDaySlot: false,
-
                         events: {
                                 url: '/api/schedule',
                                 failure: function() {

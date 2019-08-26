@@ -2,12 +2,12 @@
 <html><body>
 Hello,<br/>
 <br/>
-A cloud account has been created for you for this semester. Your credentials are as follows:<br/>
+You have been added as a TA to a course on the FBIT Cloud environment this semester:<br/>
 <br/>
-<b>Cloud Web Panel:</b><br/>
-URL:          https://cloud.hrl.uoit.ca<br/>
+<b>Course Details:</b><br/>
+Course:       %s<br/>
 Username:     %s<br/>
-Password:     %s<br/>
+Password:     [See Registration Email]<br/>
 <br/>
 <b>Connecting to your VMs:</b><br/>
 VPN Type:           OpenVPN<br/>
