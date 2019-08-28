@@ -13,49 +13,62 @@
 {% block app_content %}
 <form action="" method="post" id="form">
 	{{ form.hidden_tag() }}
-	<table class='table table-bordered'>
-		<thead>
-			<tr class='d-flex'>
-				<th class='col-1' style='text-align:center;vertical-align:middle;'>
-					<i class='fas fa-check fa-fw text-secondary'></i>
-				</th>
-				<th class='col text-secondary'>Public Images</th>
-			</tr>
-		</thead>
-		
-		<tbody>
-		{% for data in form if data.type == "BooleanField" and data.description == "public" %}
-			<tr class='d-flex'>	
-				<td class='col-1' style='text-align:center;vertical-align:middle;'>
-					<div class='custom-control custom-checkbox'>
-						<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input' hidden='true'>
-						<label class='custom-control-label' for='{{ data.id }}'/>
-					</div>
-				</td>
-				<td class='col'>{{ data.label }}</td>
-			</tr>
-		{% endfor %}
-		</tbody>
+	<div class='d-flex justify-content-end mb-2'>
+		<input class='submit-button btn btn-secondary mr-2' id="change_visibility" name="change_visibility" type="submit" value="Change Visibility" onclick="submitButton(this)">
+		<input class='submit-button btn btn-secondary' id='download_image' name='download_image' type='submit' value='Get Image Download Link' onclick='submitButton(this)'>
+	</div>
 
-	</table>
+	<div class='row'>
+		<div class='col-md col-lg col-xl'>
+			<table class='table table-light'>
+				<thead class='thead-dark'>
+					<tr class='d-flex'>
+						<th class='col-1' style='text-align:center;vertical-align:middle;'>
+							<i class='fas fa-check fa-fw'></i>
+						</th>
+						<th class='col'>Public Images</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for data in form if data.type == "BooleanField" and data.description == "public" %}
+					<tr class='d-flex'>	
+						<td class='col-1' style='text-align:center;vertical-align:middle;'>
+							<div class='custom-control custom-checkbox'>
+								<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input' hidden='true'>
+								<label class='custom-control-label' for='{{ data.id }}'/>
+							</div>
+						</td>
+						<td class='col'>{{ data.label }}</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
 
-	<table class='table' style='table-layout:fixed;'>
-		{% for data in form if data.type == "BooleanField" and data.description == "private" %}
-		<tr>
-			<td>
-				<div class='custom-control custom-checkbox'>
-					<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input position-static'>
-					<label class='custom-control-label' for='{{ data.id }}'/>
-				</div>
-			</td>
-		    
-			<td>{{ data.label }}</td>
-		</tr>
-		{% endfor %}
-	</table>
-    <p> 
-	<input class="submit-button btn btn-secondary" id="change_visibility" name="change_visibility" type="submit" value="Change Visibility" onclick="submitButton(this)">
-	<input class='submit-button btn btn-secondary' id='download_image' name='download_image' type='submit' value='Get Image Download Link' onclick='submitButton(this)'>
-    </p>
+		<div class='col-md col-lg col-xl'>
+			<table class='table table-light'>
+				<thead class='thead-dark'>
+					<tr class='d-flex'>
+						<th class='col-1' style='text-align:center;vertical-align:middle;'>
+							<i class='fas fa-check fa-fw'></i>
+						</th>
+						<th class='col'>Private Images</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for data in form if data.type == "BooleanField" and data.description == "private" %}
+					<tr class='d-flex'>
+						<td class='col-1' style='text-align:center;vertical-align:middle;'>
+							<div class='custom-control custom-checkbox'>
+								<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input position-static' hidden='true'>
+								<label class='custom-control-label' for='{{ data.id }}'/>
+							</div>
+						</td>
+						<td class='col'>{{ data.label }}</td>
+					</tr>
+				{% endfor %}
+			</table>
+		</div>
+	</div>
 </form>
 {% endblock %}

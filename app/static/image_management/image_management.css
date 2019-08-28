@@ -1,12 +1,3 @@
 input.stop-interaction {
         pointer-events:none;
 }
-
-input.visual-changes {
-        color: #999 !important;
-}
-
-input.disable-buttons {
-        pointer-events:none;
-        color: #999;
-}

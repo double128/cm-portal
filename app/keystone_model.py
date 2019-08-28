@@ -64,18 +64,19 @@ class OpenStackUser(UserMixin):
         
         tz = pytz.timezone('America/Toronto')
         schedule = Schedule.query.all()
-        for s in schedule:
-            if s.weekday == weekday:
-                if s.start_time < current_time < s.end_time:
-                    if hasattr(check, 'id'):
-                        if not s.course_id == check.id:
-                            shitter_start = datetime.datetime.fromtimestamp(s.start_time/1000).astimezone(tz).strftime('%-I:%M %p')
-                            shitter_end = datetime.datetime.fromtimestamp(s.end_time/1000).astimezone(tz).strftime('%-I:%M %p')
-                            raise ClassInSession(start_time=shitter_start, end_time=shitter_end, message=None)
-                    else:
-                        shitter_start = datetime.datetime.fromtimestamp(s.start_time/1000).astimezone(tz).strftime('%-I:%M %p')
-                        shitter_end = datetime.datetime.fromtimestamp(s.end_time/1000).astimezone(tz).strftime('%-I:%M %p')
-                        raise ClassInSession(start_time=shitter_start, end_time=shitter_end, message=None)
+        # TODO: FIX
+        #for s in schedule:
+        #    if s.weekday == weekday:
+        #        if s.start_time < current_time < s.end_time:
+        #            if hasattr(check, 'id'):
+        #                if not s.course_id == check.id:
+        #                    shitter_start = datetime.datetime.fromtimestamp(s.start_time/1000).astimezone(tz).strftime('%-I:%M %p')
+        #                    shitter_end = datetime.datetime.fromtimestamp(s.end_time/1000).astimezone(tz).strftime('%-I:%M %p')
+        #                    raise ClassInSession(start_time=shitter_start, end_time=shitter_end, message=None)
+        #            else:
+        #                shitter_start = datetime.datetime.fromtimestamp(s.start_time/1000).astimezone(tz).strftime('%-I:%M %p')
+        #                shitter_end = datetime.datetime.fromtimestamp(s.end_time/1000).astimezone(tz).strftime('%-I:%M %p')
+        #                raise ClassInSession(start_time=shitter_start, end_time=shitter_end, message=None)
 
 
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -107,7 +108,6 @@ def get_users():
 
 
 def get_course_users(course):
-    print('INSIDE GET COURSE USERS ============================')
     ks = get_keystone_session()
     projects = get_projects(course)
     instructor_project_name = list(projects['instructors'].keys())[0]
@@ -184,7 +184,7 @@ def get_project_info(course):
     return projects
 
 
-@celery.task(bind=True)
+# @celery.task(bind=True)
 def enable_disable_projects(course, enable, ignore_instructors=True):
     ks = get_keystone_session()
     for project in get_project_info(course):
@@ -265,6 +265,23 @@ def add_role(username, project, course):
         if not result:
             return False
     return True
+
+
+def add_user_manual(course, username, email, is_ta):
+    #add_user(username, email)
+    print(course)
+    print(username)
+    print(email)
+    project_name = course + '-' + username
+    
+    if not is_ta:
+        print('user is not TA')
+    #    add_project(project_name)
+    #    ks.roles.grant(user_role_id, user=user_id, project=utils.find_resource(ks.projects, project_name).id)
+    else:
+        print('user is TA')
+    #    instructor_project_id = list(project_list['instructors'].values())[0]
+    #    ks.roles.grant(utils.find_resource(ks.roles, 'user').id, user=get_user_id(username), project=instructor_project_id)
 
 
 @celery.task(bind=True)

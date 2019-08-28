@@ -2,15 +2,33 @@
 {#{% import 'bootstrap/form.html' as wtf %}#}
 
 {% block app_content %}
-	<h2>Course Notices</h2>
-        <div class="alert alert-info alert-dismissible" role="alert">
-                <h4>Course Setup Guide:</h4>
-                <p>Please upload your MyCampus CSV roster under Manage -> Users, then set a schedule under Manage -> Schedule, followed by a quota restriction under Manage -> Quota</p>
-        </div>
-        <div class="alert alert-warning alert-dismissible" role="alert">
-                <h4 class="alert-heading">Warning:</h4>
-		<p>It is VERY important that you set a quota under Manage -> Quota to ensure students can't deploy more resources than they need in each lab! This quota represents the maximum number of VMs and other assets that can be deployed by each student. If this quota is too open, you may run out of resources.</p>
-        </div>
+	<div class='card text-white bg-info mb-2'>
+		<div class='card-header'>
+			<i class="fas fa-question-circle"></i>
+			&nbsp;
+			Course Setup Guide
+		</div>
+		<div class='card-body'>
+			<ol class='m-0'>
+				<li>
+					<span>Upload your MyCampus CSV roster under <strong>Manage <i class="fas fa-angle-right fa-sm"></i> Users <i class='fas fa-angle-right fa-sm'></i> <i class="fas fa-user-plus"></i> <i class='fas fa-angle-right fa-sm'></i>&nbsp; Upload Course CSV</strong>.</span>
+				</li>
+				<li>Set a schedule under <a class='text-white' href='{{ url_for('schedule_management') }}'><strong>Manage <i class='fas fa-angle-right fa-sm'></i> Schedule</strong></a>.</li>
+				<li>Set a quota restriction under <a class='text-white' href='{{ url_for('edit_quota') }}'><strong>Manage <i class='fas fa-angle-right fa-sm'></i> Quota</strong></a>.</li>
+			</ol>
+		</div>
+	</div>
+
+	<div class='card text-white bg-warning mb-3'>
+		<div class='card-header'>
+			<i class="fas fa-exclamation-triangle"></i>
+			&nbsp;
+		</div>
+		<div class='card-body'>
+			<span>It is <strong>very important</strong> that you set a quota under <a class='text-white' href='{{ url_for('edit_quota') }}'><strong>Manage <i class='fas fa-angle-right fa-sm'></i> Quota</strong></a> to ensure students can't deploy more resources than they need in each lab!</span><br>
+			<span>This quota represents the maximum number of VMs and other assets that can be deployed by each student. If this quota is too open, you may run out of resources.</span>
+		</div>
+	</div>
 
 	<div class="card-header">
 		<nav>

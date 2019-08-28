@@ -87,11 +87,35 @@ def course_management():
     from app.forms import create_student_checkbox_list
 
     course_student_list = keystone.get_course_users(current_user.course)
-    print(course_student_list)
     course_form = create_student_checkbox_list(course_student_list)
     upload_form = forms.UploadForm()
+    adduser_form = forms.AddUserForm()
     
-    if course_form.validate_on_submit():
+
+    if adduser_form.add_user.data and adduser_form.validate_on_submit():
+        if len(str(adduser_form.username.data)) == 6:
+            username = '100' + str(adduser_form.username.data)
+        else:
+            adduser_form.username.errors.append('Your input must be 6 characters long')
+            return redirect(url_for('course_management'))
+
+        if adduser_form.is_ta.data == True:
+            email = adduser_form.email.data + '@ontariotechu.ca'
+        else:
+            email = adduser_form.email.data + '@ontariotechu.net'
+        print(username)
+        print(email)
+        
+        keystone.add_user_manual(current_user.course, '100' + adduser_form.username.data, email, is_ta)
+
+        flash('User has been successfully added.')
+        return redirect(url_for('course_management'))
+
+    elif course_form.reset_password.data or \
+            course_form.toggle_ta_status.data or \
+            course_form.delete_student.data and \
+            course_form.validate_on_submit():
+        print('INSIDE COURSE FORM VALIDATE')
         if course_form.reset_password.data is True:
             for submitted in course_form:
                 if submitted.data is True and submitted.type == "BooleanField":
@@ -118,7 +142,7 @@ def course_management():
             session['to_delete'] = to_delete
             return redirect(url_for('delete_students'))
 
-    if upload_form.upload.data and upload_form.validate_on_submit():
+    elif upload_form.upload.data and upload_form.validate_on_submit():
         filename = secure_filename(upload_form.file.data.filename)
         upload_form.file.data.save('uploads/' + filename)
         process_csv(current_user.course, 'uploads/' + filename)
@@ -131,6 +155,7 @@ def course_management():
             course=current_user.course, 
             course_form=course_form, 
             upload_form=upload_form, 
+            adduser_form=adduser_form,
             navbar_text='Course Management: ' + current_user.course,
             project_info=keystone.get_project_info(current_user.course))
 
@@ -142,8 +167,6 @@ def schedule_management():
     remove_time_form = forms.RemoveScheduleTimeForm()
 
     if add_time_form.validate_on_submit():
-        #db_course = Course.query.filter_by(course=current_user.course).first()
-
         # If this user doesn't have a course entry in the DB, add it
         if not Course.query.filter_by(course=current_user.course).first():
             new_course = Course(course=current_user.course, instructor=current_user.id)
@@ -153,68 +176,72 @@ def schedule_management():
         db_course = Course.query.filter_by(course=current_user.course).first()
         db_course_id = db_course.id
         
-        weekday = add_time_form.weekday.data
+        wd = add_time_form.weekday.data
         st = add_time_form.start_time.data
         et = add_time_form.end_time.data
+        
+        tz = pytz.timezone('America/Toronto')
 
-        # Convert string input to datetime object
         st = datetime.strptime(st, '%I:%M %p')
         et = datetime.strptime(et, '%I:%M %p')
 
-        # Add associated date with times (for proper UTC calculations)
-        week_dates = get_week_dates(date.today())
-        for w in week_dates:
-            if int(w.weekday()) == int(weekday):
-                st = datetime.combine(w, st.time())
-                et = datetime.combine(w, et.time())
-        
-        # Make object TZ-aware
-        tz = pytz.timezone('America/Toronto')
-        st = tz.localize(st)
-        et = tz.localize(et)
+        weekday_dict = {'Sun': 0, 'Mon': 1, 'Tues': 2, 'Wed': 3, 'Thurs': 4, 'Fri': 5, 'Sat': 6}
+        today = datetime.utcnow().astimezone(tz)
+        today_weekday = today.strftime('%a')
+        for w in weekday_dict:
+            if w == today_weekday:
+                today_weekday = weekday_dict[w]
 
-        # Convert to UTC
-        st_utc = st.astimezone(pytz.utc)
-        et_utc = et.astimezone(pytz.utc)
+        week_date_list = {}
+        week_start = today - timedelta(days=today_weekday)
+        for d in range(7):
+            week_date_list[str(d)] = week_start + timedelta(days=d)
 
-        # Convert to epoch value to store in DB and do comparisons
-        st_utc = st_utc.replace(tzinfo=pytz.utc).timestamp() * 1000
-        et_utc = et_utc.replace(tzinfo=pytz.utc).timestamp() * 1000
-    
+        st = datetime.combine(week_date_list[wd].date(), st.time())
+        st = tz.localize(st).astimezone(pytz.utc)
+        et = datetime.combine(week_date_list[wd].date(), et.time())
+        et = tz.localize(et).astimezone(pytz.utc)
+
         courses = Course.query.all()
         course_schedule = CourseSchema(many=True).dump(courses)
-
+        
         for c in course_schedule:
             for t in c['course_schedule']:
-                if int(t['weekday']) == int(weekday):
+                if int(t['weekday']) == int(wd):
                     c_st = t['start_time']
                     c_et = t['end_time']
 
-                    if st_utc >= c_st and st_utc <= c_et:
-                        #msg = 'The time you have entered overlaps with "' + str(c['title']) + '" (' + c_st.strftime('%A') + ' @ ' + c_st.strftime('%I:%M %p') + '-' + c_et.strftime('%I:%M %p') + ').'
+                    if st >= c_st and et <= c_et:
                         msg = 'The time you have entered conflicts with an existing entry.'
                         flash(msg, 'error')
                         return redirect(url_for('schedule_management'))
 
-                    if et_utc >= c_st and et_utc <= c_et:
+                    if st >= c_st and et <= c_et:
                         msg = 'The time you have entered conflicts with an existing entry.'
                         flash(msg, 'error')
                         return redirect(url_for('schedule_management'))
                     
-                    if st_utc < c_st and et_utc > c_et:
+                    if st < c_st and et > c_et:
                         msg = 'The time you have entered conflicts with an existing entry.'
                         flash(msg, 'error')
                         return redirect(url_for('schedule_management'))
-        
-        time_diff = et_utc - st_utc 
+
+        time_diff = et - st
+        time_diff = time_diff.total_seconds()/3600
         if time_diff < 0:
             flash('Invalid time range for schedule entry (end time cannot be earlier than start time).', 'error')
             return redirect(url_for('schedule_management'))
         elif time_diff == 0:
             flash('Invalid time range for schedule entry (start time cannot be the same as end time).', 'error')
             return redirect(url_for('schedule_management'))
+        
+        wd = int(wd)
+        start_hour = int(st.hour)
+        start_minute = int(st.minute)
+        end_hour = int(et.hour)
+        end_minute = int(et.minute)
 
-        new_time = Schedule(weekday=weekday, start_time=st_utc, end_time=et_utc, course_id=db_course_id)
+        new_time = Schedule(weekday=wd, start_hour=start_hour, start_minute=start_minute, end_hour=end_hour, end_minute=end_minute, course_id=db_course_id)
         db.session.add(new_time)
         db.session.commit()
         
@@ -447,14 +474,13 @@ def api_password_reset():
 
 @app.route('/api/schedule', methods=['GET'])
 def api_get_schedule():
+    #if not hasattr(current_user, 'id'):
+    #    if not request.args.get('token') and not request.args.get('token') == app.config['API_TOKEN']:
+    #      return jsonify({ 'Error': 'Invalid Token'})
 
-    if not hasattr(current_user, 'id'):
-        if not request.args.get('token') and not request.args.get('token') == app.config['API_TOKEN']:
-          return jsonify({ 'Error': 'Invalid Token'})
-
-    # If we get a request from fullcalendar with a date, then set the end date to today
+    # If we get a REST request from fullcalendar, make "today" the start of the week (Sunday)
     if request.args.get('start') and request.args.get('end'):
-        today = dateutil.parser.parse(request.args.get('end'))
+        today = dateutil.parser.parse(request.args.get('start'))
     else:
         today = date.today()
 
@@ -463,28 +489,40 @@ def api_get_schedule():
     tz = pytz.timezone('America/Toronto')   
     
     schedule_list = []
-    week_dates = get_week_dates(today)
+    week_date_list = {}
+    # Start of week will always be Sunday, so we don't have to set our "week start" value like we do in schedule_management()
+    for d in range(7):
+        week_date_list[str(d)] = today + timedelta(days=d)
+
     for r in result:
         for t in r['course_schedule']:
             course_dict = {}
+            
             course_dict['title'] = r['course'] + ' Lab Session'
             course_dict['instructor'] = r['instructor']
             course_dict['course'] = r['course']
             
-            for w in week_dates:
-                if w.weekday() == t['weekday']:
-                    start = datetime.fromtimestamp(t['start_time']/1000)
-                    start = pytz.utc.localize(start)
-                    start = start.astimezone(tz)
-                    start = datetime.combine(w, start.time())
-                    end = datetime.fromtimestamp(t['end_time']/1000)
-                    end = pytz.utc.localize(end)
-                    end = end.astimezone(tz)
-                    end = datetime.combine(w, end.time())
+            for w in week_date_list:
+                if w == str(t['weekday']):
+                    start_time = time(t['start_hour'], t['start_minute'])
+                    end_time = time(t['end_hour'], t['end_minute'])
                     
-                    course_dict['start'] = start.isoformat()
-                    course_dict['end'] = end.isoformat()
-                    course_dict['weekday'] = w.weekday()
+                    start_time = pytz.utc.localize(start_time)
+                    end_time = pytz.utc.localize(end_time)
+
+                    start_time = datetime.combine(week_date_list[w], start_time)
+                    end_time = datetime.combine(week_date_list[w], end_time)
+                    
+                    start_time = start_time.astimezone(tz)
+                    end_time = end_time.astimezone(tz)
+
+                    # Have to re-use this because the dates will be wrong if the time is after 8PM EDT, and the UTC->Eastern conversion will set the time to be the next day
+                    start_time = datetime.combine(week_date_list[w], start_time.time())
+                    end_time = datetime.combine(week_date_list[w], end_time.time())
+                    
+                    course_dict['start'] = start_time.isoformat()
+                    course_dict['end'] = end_time.isoformat()
+                    course_dict['weekday'] = t['weekday']
                     course_dict['event_id'] = t['id']
                     
                     if hasattr(current_user, 'course') and course_dict['course'] == current_user.course:
@@ -504,7 +542,6 @@ def api_get_schedule():
                         course_dict['editable'] = False
                         course_dict['backgroundColor'] = '#ccc'
                         course_dict['borderColor'] = '#ccc'
-
             schedule_list.append(course_dict)
 
     return jsonify(schedule_list)
@@ -519,19 +556,22 @@ def api_cron_tasks():
     # Get current time in EST/EDT in ISO formatting
     current_time = datetime.now() #.astimezone(pytz.timezone('America/Toronto'))
     course_schedule = api_get_schedule().json # We can use the function above since it's already parsed nicely
-    # current_time = datetime(2019, 8, 25, 10, 0, 0) #.astimezone(pytz.timezone('America/Toronto'))
-    # print('CURRENT TIME: ' + str(current_time))
+    current_time = datetime(2019, 8, 28, 14, 0, 0) #.astimezone(pytz.timezone('America/Toronto'))
+    print('CURRENT TIME: ' + str(current_time))
 
     for c in course_schedule:
+
+        if 'Open Weekend' in c['title']:
+            continue
 
         course = c['course']
         start_time = dateutil.parser.parse(c['start']) #.astimezone(pytz.timezone('America/Toronto'))
         end_time = dateutil.parser.parse(c['end']) #.astimezone(pytz.timezone('America/Toronto'))
-        # print(c['title'] + ': ' + str(start_time) + ' -> ' + str(end_time))
+        print(c['title'] + ': ' + str(start_time) + ' -> ' + str(end_time))
 
         if current_time.weekday() == 5 or current_time.weekday() == 6:
-            # print('Open Weekend')
-            keystone.enable_disable_projects.delay(c['title'].split(' ')[0], True)
+            print('Open Weekend')
+            keystone.enable_disable_projects(c['title'].split(' ')[0], True)
 
         elif start_time.day == current_time.day:
            
@@ -539,14 +579,14 @@ def api_cron_tasks():
             course_time_after = end_time + timedelta(minutes=app.config['COURSE_TIME_BUFFER'])
 
             if course_time_before <= current_time < course_time_after:
-                # print('Course running')
-                keystone.enable_disable_projects.delay(c['title'].split(' ')[0], True)
-                keystone.enable_disable_projects.delay(c['title'].split(' ')[0] + '-Group', False)
+                print('Course running')
+                keystone.enable_disable_projects(c['title'].split(' ')[0], True)
+                keystone.enable_disable_projects('-Group', False)
 
         else:
-            # print('Course not running')
-            keystone.enable_disable_projects.delay(c['title'].split(' ')[0], False)
-            keystone.enable_disable_projects.delay(c['title'].split(' ')[0] + '-Group', True)
+            print('Course not running')
+            keystone.enable_disable_projects(c['title'].split(' ')[0], False)
+            keystone.enable_disable_projects('-Group', True)
 
     return 'ok'
 

@@ -14,8 +14,8 @@
 		});
 
 		$('.custom-file-input').on('change', function() {
-   			let fileName = $(this).val().split('\\').pop();
-   			$(this).next('.custom-file-label').addClass("selected").html(fileName);
+			let fileName = $(this).val().split('\\').pop();
+			$(this).next('.custom-file-label').addClass("selected").html(fileName);
 		});
 	</script>
 {% endblock %}
@@ -31,25 +31,32 @@
 		{{ course_form.hidden_tag() }}
 		
 		<div class='d-flex justify-content-end pb-2'>
-			<div class='pr-1'><input class="submit-button btn btn-primary" id="reset_password" name="reset_password" type="submit" value="Reset Password" onclick="submitButton(this)"></div>
-			<div class='pr-1'><input class="submit-button btn btn-primary" id="toggle_ta_status" name="toggle_ta_status" type="submit" value="Toggle TA Status" onclick="submitButton(this)"></div>
-			<div class='pl-1'><input class="submit-button btn btn-danger" id="delete_student" name="delete_student" type="submit" value="Delete Student" onclick="submitButton(this)"></div>
-			<div class='pl-1'>
-				<a href='#uploadCSVModal' class='btn btn-success' data-toggle='modal' data-target='#uploadCSVModal'>Upload Course CSV</a>
+			<div class='pr-1'><input class="submit-button btn btn-secondary" id="reset_password" name="reset_password" type="submit" value="Reset Password" onclick="submitButton(this)"></div>
+			<div class='pr-1'><input class="submit-button btn btn-secondary" id="toggle_ta_status" name="toggle_ta_status" type="submit" value="Toggle TA Status" onclick="submitButton(this)"></div>
+			<div class='pr-1'><input class="submit-button btn btn-danger" id="delete_student" name="delete_student" type="submit" value="Delete Student" onclick="submitButton(this)"></div>
+			{#<div><a href='#uploadCSVModal' class='btn btn-success' data-toggle='modal' data-target='#uploadCSVModal'>Upload Course CSV</a></div>#}
+			<div class='dropdown'>
+				<button class='btn btn-secondary dropdown-toggle' type='button' id='dropdownMenuButton' data-toggle='dropdown'>
+					<i class="fas fa-user-plus"></i>
+				</button>
+				<div class='dropdown-menu'>
+					<a class='dropdown-item' href='#uploadCSVModal' data-toggle='modal' data-target='#uploadCSVModal'>Upload Course CSV</a>
+					<a class='dropdown-item' href='#addStudentModal' data-toggle='modal' data-target='#addStudentModal'>Add Student Manually</a>
+				</div>
 			</div>
 		</div>
 
 		<table class='table table-light'>
 			<thead class='thead-dark'>
-   				<tr>
+				<tr>
 					<th><i style='margin-left:15px' class='fas fa-check fa-fw'></i></div></th>
 					<th>Username</th>
-        			<th>Project Name</th>
-    			</tr>
+				<th>Project Name</th>
+			</tr>
 			</thead>
 			<tbody>
 				{% for data in course_form if data.type == "BooleanField" %}
-    				<tr>
+				<tr>
 						<td>
 							<div class='custom-control custom-checkbox'>
 								<input id='{{ data.id }}' name='{{ data.id }}' type='checkbox' value='y' class='custom-control-input position-static'>
@@ -57,9 +64,9 @@
 							</div>
 						</td>
 						<td>{% if 'nstructors' in data.description %}{{ data.label }} (TA){% else %}{{ data.label }}{% endif %}</td>
-	   		    		<td>{{ data.description }}</td>
-    				</tr>
-    			{% endfor %}
+					<td>{{ data.description }}</td>
+				</tr>
+			{% endfor %}
 			</tbody>
 		</table>
 		<hr>
@@ -75,22 +82,82 @@
 				<div class='modal-body'>
 					<form action='' method='post' enctype='multipart/form-data'>
 						{{ upload_form.hidden_tag() }}
-						{% for error in upload_form.file.errors %}
-  						<span style="color: red;">[{{ error }}]</span>
-						{% endfor %}
 						<div class='form-group'>
 							<div class='input-group'>
 								<div class='custom-file'>
-									<input class='custom-file-input' id='file' name='file' type='file'>
+									<input class='custom-file-input' id='file' name='file' type='file' required>
 									<label class='custom-file-label text-truncate' for='file'>Choose file</label>
 								</div>
 							</div>
 						</div>
+						{% for error in upload_form.file.errors %}
+						<span style="color: red;">[{{ error }}]</span>
+						{% endfor %}
+					</div>
+					<div class='modal-footer'>
 						<div class='d-flex justify-content-end'>
 							{{ wtf.render_field(upload_form.upload) }}
 						</div>
+					</div>
 					</form>
 				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id='addStudentModal' class='modal fade' role='dialog'>
+		<div class='modal-dialog modal-dialog-centered'>
+			<div class='modal-content'>
+				<div class='modal-header'>
+					<h4 class='modal-title'>Add Student</h4>
+					<button type='button' class='close' data-dismiss='modal'>&times;</button>
+				</div>
+				<form action='' method='post'>
+					<div class='modal-body'>
+						{{ adduser_form.hidden_tag() }}
+						<div class='form-group'>
+							<div class='custom-control custom-switch'>
+								<input type='checkbox' class='custom-control-input' id='is_ta' name='is_ta'>
+								<label class='custom-control-label' for='is_ta'>Create TA User</label>
+							</div>
+						</div>
+
+						<div class='form-group'>
+							<label class='form-control-label' for='username'>Username</label>
+							<div class='input-group'>
+								{% if adduser_form.username.errors %}
+								<div class='input-group-prepend'>
+									<span class='input-group-text'>100</span>
+								</div>
+								<input type='text' class='form-control rounded-right is-invalid' id='username' name='username' required maxlength='6'>
+
+								{% for error in adduser_form.username.errors %}
+								<div class='invalid-feedback'>{{ error }}</div>
+								{% endfor %}
+
+								{% else %}
+								<div class='input-group-prepend'>
+									<span class='input-group-text'>100</span>
+								</div>
+								<input type='text' class='form-control' id='username' name='username' required maxlength='6'>
+								{% endif %}
+							</div>
+						</div>
+						
+						<div class='form-group'>
+							<label class='form-control-label' for='email'>Email</label>
+							<div class='input-group'>
+								<input type='text' class='form-control' id='email' name='email' required>
+								<div class='input-group-append'>
+									<span class='input-group-text' id='email-append-text'>@ontariotechu.net</label>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class='modal-footer'>
+						<input class="btn btn-success" id="add_user" name="add_user" type="submit" value="Create Student">
+					</div>
+				</form>
 			</div>
 		</div>
 	</div>

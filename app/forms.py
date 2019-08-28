@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed, FileRequired
 from wtforms import StringField, PasswordField, IntegerField, SubmitField, SelectField, BooleanField, SelectMultipleField, HiddenField, DateTimeField, RadioField
-from wtforms.validators import DataRequired, NumberRange, Length, IPAddress, InputRequired, ValidationError, StopValidation, Regexp
+from wtforms.validators import DataRequired, NumberRange, Length, IPAddress, InputRequired, ValidationError, StopValidation, Regexp, Email
 
 class LoginForm(FlaskForm):
     username = StringField('Username', default='test', render_kw={'placeholder': 'Username'}, validators=[DataRequired()])
@@ -16,6 +16,12 @@ class UploadForm(FlaskForm):
     file = FileField('file', validators=[FileAllowed(['csv'], '.csv files only!'), FileRequired()])
     upload = SubmitField('Upload')
 
+
+class AddUserForm(FlaskForm):
+    username = IntegerField('Username', validators=[InputRequired()])
+    email = StringField('Email', validators=[InputRequired()])
+    is_ta = BooleanField()
+    add_user = SubmitField('Add User')
 
 class QuotaForm(FlaskForm):
     instances_quota = SelectField('Instances', coerce=int)
@@ -156,9 +162,11 @@ def create_student_checkbox_list(course_student_list):
 class AddScheduleTimeForm(FlaskForm):
     #weekday = SelectField('Weekday', choices=[('0', 'Monday'), ('1', 'Tuesday'), ('2', 'Wednesday'), ('3', 'Thursday'), ('4', 'Friday'), ('5', 'Saturday'), ('6', 'Sunday')], validators=[DataRequired()])
     #weekday = SelectField('Weekday', choices=[('0', 'Monday'), ('1', 'Tuesday'), ('2', 'Wednesday'), ('3', 'Thursday'), ('4', 'Friday')], validators=[DataRequired()])
-    weekday = RadioField('weekday', choices=[('0', 'Monday'), ('1', 'Tuesday'), ('2', 'Wednesday'), ('3', 'Thursday'), ('4', 'Friday')], validators=[DataRequired()])
-    start_time = StringField(validators=[DataRequired()])
-    end_time = StringField(validators=[DataRequired()])
+    #weekday = RadioField('weekday', choices=[('0', 'Monday'), ('1', 'Tuesday'), ('2', 'Wednesday'), ('3', 'Thursday'), ('4', 'Friday')], validators=[DataRequired()])
+    
+    weekday = RadioField('weekday', choices=[('0', 'Sunday'), ('1', 'Monday'), ('2', 'Tuesday'), ('3', 'Wednesday'), ('4', 'Thursday'), ('5', 'Friday'), ('6', 'Saturday')], validators=[InputRequired()])
+    start_time = StringField(validators=[InputRequired()])
+    end_time = StringField(validators=[InputRequired()])
     add_time = SubmitField('Confirm')
 
 # Remove times entries from the schedule
