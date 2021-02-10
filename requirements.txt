@@ -28,7 +28,7 @@ cmd2==0.9.15
 
 colorama==0.4.1
 
-cryptography==3.2
+cryptography==3.3.2
 
 DateTimeRange==0.6.1
 
