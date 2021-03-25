@@ -142,7 +142,7 @@ python-openstackclient==3.19.0
 
 pytz==2019.2
 
-PyYAML==5.1.2
+PyYAML==5.4
 
 requests==2.22.0
 
